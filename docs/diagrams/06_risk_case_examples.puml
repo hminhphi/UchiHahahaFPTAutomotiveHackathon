@@ -1,0 +1,48 @@
+@startuml
+!theme plain
+title Risk Case Logic - Examples For Detection, Audit, And Clustering
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+
+start
+:Windowed vector\nroad_context + vehicle_state + driver_state;
+
+if (TTC low?) then (yes)
+  if (closing speed high?) then (yes)
+    :near_miss / critical_following;
+  else (no)
+    :monitor low-speed proximity;
+  endif
+endif
+
+if (rear vehicle close?) then (yes)
+  if (ego harsh brake?) then (yes)
+    :rear_collision_risk;
+  endif
+endif
+
+if (driver distracted?) then (yes)
+  if (ego speed > 5 km/h?) then (yes)
+    :distracted_driving_risk;
+  endif
+endif
+
+if (side vehicle exists?) then (yes)
+  if (sharp steering or lane offset rising?) then (yes)
+    :unsafe_lane_change_or_side_swipe_risk;
+  endif
+endif
+
+if (turning at intersection?) then (yes)
+  if (no turn signal or lane drift?) then (yes)
+    :unsafe_turn_or_signal_violation;
+  endif
+endif
+
+:Output candidate risk label\n+ severity + confidence + explanation;
+stop
+@enduml

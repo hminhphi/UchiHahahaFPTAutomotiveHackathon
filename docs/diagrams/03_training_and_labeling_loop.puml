@@ -1,0 +1,63 @@
+@startuml
+!theme plain
+title Verified Model Training + Post-Inference Cluster Labeling
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+
+rectangle "Raw trip streams\nroad frames + driver frames + telemetry" as Raw #EAF2FF
+rectangle "Per-source outputs\nroad_context + driver_state + vehicle_state" as SourceOut #EAF2FF
+rectangle "Windowed feature vectors\n1s / 3s / 5s windows" as Windows #FFF7EE
+
+rectangle "Seed rules\nTTC thresholds\nlane drift\nharsh brake\ndistraction at speed" as Rules #FFFFFF
+rectangle "Human verification\nreview high-impact / uncertain events" as Human #FFFFFF
+rectangle "Training dataset\nverified labels + feature windows\nbalanced by scenario and trip" as Dataset #FFFFFF
+
+rectangle "Baseline model\nGBDT / XGBoost / LightGBM\nfast and explainable" as Baseline #034EA2
+rectangle "Temporal model\nTCN / GRU / Tiny Transformer\nmultimodal sequence risk" as Temporal #F37021
+rectangle "Calibration\nisotonic / Platt scaling\nrisk probability -> severity" as Calibration #FFFFFF
+rectangle "Evaluation\nPR-AUC, false alarm/hour\nrecall@critical risk\ntrip-level consistency" as Eval #FFFFFF
+rectangle "Model registry\nversioned online risk detector" as Registry #EAF2FF
+
+rectangle "Risk events + embeddings\npost-inference outputs" as RiskOutputs #EAF2FF
+rectangle "Embedding + clustering\ngroup recurring risk patterns" as Cluster #FFFFFF
+rectangle "LLM semantic labeling\n4B-8B model\nname completed clusters" as LLM #FFFFFF
+rectangle "Analyst validation\nconfirm cluster semantics" as Analyst #FFFFFF
+rectangle "Risk cluster catalog\nlabels for dashboard analytics" as Catalog #EAF2FF
+
+Raw --> SourceOut
+SourceOut --> Windows
+Windows --> Rules
+Rules --> Dataset : high precision seed labels
+Human --> Dataset
+Windows --> Human : uncertain samples
+Dataset --> Baseline
+Dataset --> Temporal
+Baseline --> Calibration
+Temporal --> Calibration
+Calibration --> Eval
+Eval --> Registry
+Registry --> Windows : deploy online model
+
+Registry --> RiskOutputs : online inference
+RiskOutputs --> Cluster
+Cluster --> LLM : summary + representatives
+LLM --> Analyst
+Analyst --> Catalog
+
+note bottom of Rules
+Rules are useful for bootstrapping and auditability.
+They should not be the only final detector because
+interaction cases grow combinatorially.
+end note
+
+note bottom of LLM
+LLM acts only after clustering.
+Cluster labels are analytics metadata,
+not model-training labels.
+end note
+
+@enduml

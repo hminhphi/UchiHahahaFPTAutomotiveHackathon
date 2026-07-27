@@ -1,0 +1,50 @@
+@startuml
+!theme plain
+title Driver Camera / DMS Model - Driver State And Unsafe Behavior
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+
+start
+:Load in-cabin driver frames;
+:Face / head / eye / body region detection;
+
+fork
+  :Eye-state model;\neye closure, blink duration,\nPERCLOS-like features;
+fork again
+  :Head pose + gaze model;\nlooking away, mirror glance,\nphone-down glance;
+fork again
+  :Behavior classifiers;\nphone use, seatbelt missing,\nhands-off-wheel if visible;
+end fork
+
+:Temporal smoothing;\nremove single-frame noise;
+:Driver state inference;
+
+if (drowsy or fatigued?) then (yes)
+  :Emit drowsiness risk signal;
+elseif (distracted?) then (yes)
+  :Emit distraction risk signal;
+elseif (unsafe behavior?) then (yes)
+  :Emit behavior violation signal;
+else (no)
+  :Emit attentive / unknown state;
+endif
+
+:Emit driver_state vector;
+note right
+Suggested fields:
+- drowsiness_prob
+- fatigue_level
+- distraction_prob
+- eye_closure_ms
+- gaze_offroad_ms
+- phone_use_prob
+- seatbelt_missing_prob
+- driver_state_confidence
+end note
+
+stop
+@enduml

@@ -1,0 +1,51 @@
+@startuml
+!theme plain
+title Road-view Model - Distance, Tracking, TTC, Lane Context
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+
+start
+:Load synchronized road frames\nfront / side / rear camera views;
+:Load calibration + depth map\nor stereo geometry if available;
+
+fork
+  :Object detection + classification\nvehicle / pedestrian / obstacle;
+  :Multi-object tracking\ntrack_id, bbox, class, confidence;
+fork again
+  :Lane detection;\n:Lane offset + lane boundary confidence;
+fork again
+  :Depth / distance estimation;\nDepth median in object ROI\n+ single-view road-plane geometry;
+end fork
+
+:Associate object tracks with distance history;
+:Estimate relative velocity;\nrel_vel = d(t-1) - d(t) over dt;
+:Estimate relative acceleration;\nsmoothed velocity delta over time;
+:Compute TTC;\nTTC = distance / closing_speed\nonly when closing_speed > threshold;
+
+if (Object beside ego lane?) then (yes)
+  :Mark lateral risk;\nside vehicle + steering/lane offset;
+else (no)
+  :Mark longitudinal risk;\nlead/follow object + TTC;
+endif
+
+:Emit road_context vector;
+note right
+Suggested fields:
+- nearest_front_distance_m
+- nearest_rear_distance_m
+- left/right_vehicle_distance_m
+- relative_velocity_mps
+- relative_acceleration_mps2
+- min_ttc_s
+- lane_offset_m
+- lane_departure_prob
+- object_track_count
+- confidence flags
+end note
+
+stop
+@enduml

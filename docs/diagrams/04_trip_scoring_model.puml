@@ -1,0 +1,35 @@
+@startuml
+!theme plain
+title Trip Score Model - Explainable Fleet Score From Risk Events
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+
+rectangle "Risk events\nlabel, severity, confidence,\nstart/end timestamp,\nevidence frame" as Events #F37021
+rectangle "Context features\nspeed, road type, turn signal,\ntraffic density, driver state" as Context #EAF2FF
+rectangle "Event consolidation\nmerge repeated alerts\nsuppress flicker" as Merge #FFFFFF
+rectangle "Penalty model\nseverity x duration x confidence\nwith context multiplier" as Penalty #FFFFFF
+rectangle "Learned calibration\nGBDT / logistic calibration\nmaps event mix -> trip risk" as Learned #FFFFFF
+rectangle "Score composer\n100 - capped penalties\n+ recovery / safe-driving credits" as Composer #034EA2
+rectangle "Score breakdown\nroad risk, driver state,\nvehicle handling, lane behavior" as Breakdown #FFFFFF
+rectangle "Post-trip report\nwhy score changed\nwhat to coach next" as Report #EAF2FF
+
+Events --> Merge
+Context --> Penalty
+Merge --> Penalty
+Penalty --> Learned
+Learned --> Composer
+Composer --> Breakdown
+Breakdown --> Report
+
+note right of Composer
+Recommended MVP:
+Use interpretable additive score for demo,
+then learn calibration weights from labeled trips.
+This gives both explainability and adaptability.
+end note
+
+@enduml

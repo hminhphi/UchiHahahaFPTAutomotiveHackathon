@@ -1,0 +1,91 @@
+@startuml
+!theme plain
+title FleetIQ Guardian - Multimodal Risk Intelligence Overview
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+skinparam componentStyle rectangle
+
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #19226D
+  FontColor #000000
+}
+
+skinparam package {
+  BackgroundColor #F7F8FB
+  BorderColor #CDCCCC
+  FontColor #19226D
+}
+
+rectangle "Road-view Cameras\nmulti-view / stereo / depth" as RoadCam #EAF2FF
+rectangle "Sensor Fusion\nspeed, brake, steering,\nturn signal, lane offset" as Sensor #EAF2FF
+rectangle "Driver Camera\nin-cabin video" as DriverCam #EAF2FF
+
+package "Per-source models" {
+  rectangle "Road Context Model\nobjects + class + tracking\nestimated distance\nrelative velocity/acceleration\nTTC + lane/lane offset" as RoadModel #FFFFFF
+  rectangle "Telemetry Normalizer\nresample + validate + normalize\nvehicle state vector" as TelemetryModel #FFFFFF
+  rectangle "DMS Model\nfatigue + drowsiness\ndistraction + phone\nseatbelt + eye closure" as DMSModel #FFFFFF
+}
+
+rectangle "Time Alignment\nframe index + timestamp\nconfidence + missing-data flags" as Align #FFF7EE
+rectangle "Feature Window Vectorizer\n1-5s rolling windows\nroad + driver + vehicle context" as Vectorizer #FFF7EE
+
+rectangle "Online Risk Event Detector\nlight temporal model\nTCN / GRU / Tiny Transformer\n+ calibrated rule features" as RiskModel #F37021
+rectangle "Risk Label Mapping\nnear_miss, unsafe_lane_change,\ndistracted_speeding,\nharsh_brake_following" as LabelMap #FFFFFF
+rectangle "Trip Scoring Engine\nrisk severity x duration x confidence\ncontext-aware score breakdown" as Score #034EA2
+
+rectangle "Fleet Dashboard\nranking + event log + trip drill-down\nTTC timeline + evidence + coaching" as Dashboard #EAF2FF
+
+package "Verified model training" {
+  rectangle "Verified Labels\nground truth + precise rules\nhuman-reviewed events" as VerifiedLabels #FFFFFF
+  rectangle "Training Dataset\nfeature windows + verified labels\nclass balance + trip splits" as TrainData #FFFFFF
+  rectangle "Model Training\nmultimodal temporal risk model" as Train #FFFFFF
+  rectangle "Model Registry\nversioned risk detector" as Registry #FFFFFF
+}
+
+package "Post-inference cluster labeling - analytics only" {
+  rectangle "Risk Event Store\nevents + embeddings\nrepresentative samples" as CaseStore #FFFFFF
+  rectangle "Embedding + Clustering\ngroup recurring risk patterns" as Cluster #FFFFFF
+  rectangle "LLM Semantic Labeling\n4B-8B model\nname completed clusters" as LLM #FFFFFF
+  rectangle "Analyst Validation\nconfirm cluster name" as Human #FFFFFF
+  rectangle "Risk Cluster Catalog\nsemantic label + cluster metadata" as Catalog #FFFFFF
+}
+
+RoadCam --> RoadModel
+Sensor --> TelemetryModel
+DriverCam --> DMSModel
+
+RoadModel --> Align
+TelemetryModel --> Align
+DMSModel --> Align
+Align --> Vectorizer
+Vectorizer --> RiskModel
+RiskModel --> LabelMap
+LabelMap --> Score
+Score --> Dashboard
+LabelMap --> Dashboard
+
+Vectorizer --> TrainData : training features
+VerifiedLabels --> TrainData
+TrainData --> Train
+Train --> Registry
+Registry --> RiskModel : deploy version
+
+RiskModel --> CaseStore : risk outputs
+CaseStore --> Cluster
+Cluster --> LLM : cluster summary + examples
+LLM --> Human
+Human --> Catalog
+Catalog --> Dashboard : cluster labels for analytics
+
+note right of LLM
+LLM only labels clusters after clustering.
+Its output is not training data and has
+no path to model training or deployment.
+end note
+
+@enduml

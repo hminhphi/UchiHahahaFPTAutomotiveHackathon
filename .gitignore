@@ -1,0 +1,85 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+wheels/
+
+# Environments and local configuration
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+.python-version.local
+
+# IDE and local agent state
+.idea/
+.vscode/
+.opencode/
+.codex/
+opencode.json
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dataset and generated outputs
+data/
+artifacts/
+runs/
+wandb/
+mlruns/
+outputs/
+predictions/
+checkpoints/
+
+# Model weights and numerical caches
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+*.safetensors
+*.bin
+*.npy
+*.npz
+*.pkl
+*.pickle
+
+# Rendered media and runtime logs
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.log
+*.tmp
+*.temp
+
+# Research material and cloned analysis repositories
+paper/
+third_party/
+
+# Extracted office/PDF intermediates
+*_extracted/
+extracted_figures/
+extracted_text/
+*.pptx.rendered/
+*.pdf.rendered/
+
+# Downloaded tooling and organizer reference material
+*.jar
+Template for Teams - Hackathon 2026.pptx
+Automotive Hackathon Webinar 25.06 (1).pdf

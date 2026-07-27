@@ -1,0 +1,50 @@
+@startuml
+!theme plain
+left to right direction
+title Method Stack With Paper References
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+skinparam componentStyle rectangle
+
+rectangle "Road Scene Understanding\n\nmulti-camera -> BEV/occupancy\nobject tracking\nlane context" as Road #EAF2FF
+rectangle "Distance + TTC\n\ndepth ROI\nsingle-view geometry\nrelative velocity" as TTC #FFF7EE
+rectangle "Driver State / DMS\n\ndrowsiness\ndistraction\nunsafe behaviors" as DMS #EAF2FF
+rectangle "Fusion + Risk Learning\n\nverified labels + rule guardrails\nGBDT / temporal model" as Fusion #F37021
+rectangle "Post-Inference Discovery\n\nrisk embedding clustering\nLLM semantic cluster labels\nnot used for training" as Discovery #FFF7EE
+rectangle "Trip Score + Coaching\n\nrisk aggregation\nexplainable score\nIVI / post-trip action" as Score #034EA2
+
+Road --> TTC
+TTC --> Fusion
+DMS --> Fusion
+Fusion --> Score
+Fusion --> Discovery
+Discovery --> Score : analytics labels
+
+note bottom of Road
+References:
+SurroundOcc
+Multi-camera BEV Perception
+Cam4DOcc
+6D-VNet as extension
+end note
+
+note bottom of TTC
+References:
+Real-time Vehicle Distance Estimation
+TTC-AMD Study
+Speed Estimation from Video
+end note
+
+note bottom of DMS
+References:
+Real-Time Sleepiness Detection
+DMS Survey
+Multimodal Fatigue Detection
+HRV Drowsiness Detection
+end note
+
+@enduml

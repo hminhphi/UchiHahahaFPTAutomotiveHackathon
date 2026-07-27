@@ -1,0 +1,28 @@
+@startuml
+!theme plain
+left to right direction
+title Proposal Demo Storyboard - What Reviewers Will See
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+
+rectangle "1. Fleet Overview\n\nrisk map\nranked drivers\nlatest alerts" as S1 #EAF2FF
+rectangle "2. Trip Drill-down\n\nTTC timeline\nDMS timeline\ntelemetry events" as S2 #FFFFFF
+rectangle "3. Evidence Moment\n\nroad frame\nin-car frame\nevent explanation" as S3 #FFF7EE
+rectangle "4. Score Breakdown\n\nroad risk\ndriver state\nvehicle handling\nlane behavior" as S4 #FFFFFF
+rectangle "5. Coaching + Back-to-Car\n\npost-trip tips\nIVI advisory log\nsafety fallback" as S5 #034EA2
+
+S1 --> S2
+S2 --> S3
+S3 --> S4
+S4 --> S5
+
+note bottom
+The demo should prove a complete loop:
+detect risk -> explain evidence -> score trip -> recommend action -> optionally send safe IVI coaching.
+end note
+
+@enduml

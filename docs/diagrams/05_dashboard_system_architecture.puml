@@ -1,0 +1,53 @@
+@startuml
+!theme plain
+title System Architecture - Trip Analysis To Fleet Dashboard
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+skinparam componentStyle rectangle
+
+actor "Fleet Manager" as Manager
+actor "OEM Analyst" as OEM
+
+node "Trip Processing Service" {
+  component "Dataset Loader\nKITTI frames + driver cam\nT01.json.gz telemetry" as Loader #EAF2FF
+  component "Feature Extraction Workers\nroad + DMS + telemetry" as Workers #FFFFFF
+  component "Risk Inference Service\nonline risk model" as Risk #F37021
+  component "Trip Scoring Service\nscore + explanation" as Scoring #034EA2
+}
+
+database "Feature Store\nwindow vectors" as FeatureStore
+database "Event Store\nrisk events + evidence URI" as EventStore
+database "Trip Score Store\nscore breakdown + report" as ScoreStore
+database "Model Registry\nrisk detector versions" as ModelRegistry
+
+node "Fleet Dashboard" {
+  component "Fleet Overview\nranking + heatmap" as Overview #EAF2FF
+  component "Trip Detail\nTTC + driver timeline" as TripDetail #FFFFFF
+  component "Evidence Viewer\nframes/clips + labels" as Evidence #FFFFFF
+  component "Coaching Report\nrecommendations" as Coaching #FFFFFF
+}
+
+Loader --> Workers
+Workers --> FeatureStore
+FeatureStore --> Risk
+ModelRegistry --> Risk
+Risk --> EventStore
+EventStore --> Scoring
+Scoring --> ScoreStore
+
+ScoreStore --> Overview
+EventStore --> TripDetail
+EventStore --> Evidence
+ScoreStore --> Coaching
+
+Manager --> Overview
+Manager --> TripDetail
+Manager --> Evidence
+OEM --> ScoreStore
+OEM --> FeatureStore
+
+@enduml

@@ -1,0 +1,41 @@
+@startuml
+!theme plain
+title Closed-Loop Back-to-Car - Safety-Gated IVI Coaching
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+
+start
+:Fleet risk event generated;\nlabel + severity + confidence + evidence;
+:Check intervention eligibility;
+
+if (Real-time event?) then (yes)
+  if (confidence high\nand latency < budget?) then (yes)
+    if (driver annoyance risk low\nand fallback available?) then (yes)
+      :Send IVI advisory;\nvisual / voice / haptic;
+      :Log intervention outcome;
+    else (no)
+      :Do not alert in-car;\nstore for post-trip coaching;
+    endif
+  else (no)
+    :Fleet dashboard alert only;
+  endif
+else (post-trip)
+  :Generate coaching report;\n3 actions for next trip;
+endif
+
+:Fleet Manager sees event,\nintervention, and result;
+stop
+
+note right
+Examples:
+- TTC critical -> slow down advisory
+- distracted at speed -> attention reminder
+- repeated lane drift -> coaching card
+- harsh brake near rear vehicle -> post-trip review
+end note
+
+@enduml

@@ -1,0 +1,85 @@
+@startuml
+!theme plain
+left to right direction
+'title FleetIQ Guardian - Online Processing Pipeline
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+skinparam componentStyle rectangle
+
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #19226D
+  FontColor #000000
+}
+
+skinparam package {
+  BackgroundColor #F7F8FB
+  BorderColor #CDCCCC
+  FontColor #19226D
+}
+
+package "Input Streams" {
+  rectangle "Road-view Cameras\nmulti-view / stereo / depth" as RoadCam #EAF2FF
+  rectangle "Sensor Fusion\nspeed, brake, steering\nturn signal, lane offset" as Sensor #EAF2FF
+  rectangle "Driver Camera\nin-cabin video" as DriverCam #EAF2FF
+}
+
+package "Per-source Models" {
+  rectangle "Road Context Model\nobject class + tracking\ndistance + relative motion\nTTC + lane offset" as RoadModel #FFFFFF
+  rectangle "Telemetry Normalizer\nresample + validate\nvehicle state vector" as TelemetryModel #FFFFFF
+  rectangle "DMS Model\nfatigue + drowsiness\ndistraction + phone\nseatbelt + eye closure" as DMSModel #FFFFFF
+}
+
+rectangle "Time Alignment\nframe index + timestamp\nconfidence + missing flags" as Align #FFF7EE
+
+rectangle "Risk Event Detector\nlight online model\nrisk label + severity + confidence" as RiskModel #F37021
+rectangle "Risk Label Mapping\nnear-miss / lane risk\nDMS risk / compound risk" as LabelMap #FFFFFF
+rectangle "Trip Scoring Engine\n0-100 score\nbreakdown + explanation" as Score #034EA2
+
+package "Out-Car Products" {
+  rectangle "Fleet Dashboard\nranking + event log\ntrip drill-down" as Dashboard #EAF2FF
+  rectangle "Trip Report\nscore timeline\nevidence + coaching" as Report #EAF2FF
+  rectangle "OEM Analytics API\nJSON/PDF export\nvehicle_id / trip_id" as API #EAF2FF
+}
+
+package "Back-to-Car Bonus" {
+  rectangle "Safety Gate\nconfidence threshold\nlatency budget\nfallback policy" as Gate #FFFFFF
+  rectangle "IVI Coaching\nspeed advisory\nattention alert\npost-trip feedback" as IVI #034EA2
+}
+
+RoadCam --> RoadModel
+Sensor --> TelemetryModel
+DriverCam --> DMSModel
+
+RoadModel --> Align
+TelemetryModel --> Align
+DMSModel --> Align
+Align --> RiskModel
+RiskModel --> LabelMap
+LabelMap --> Score
+
+Score --> Dashboard
+Score --> Report
+Score --> API
+LabelMap --> Dashboard
+LabelMap --> Report
+LabelMap --> Gate
+Gate --> IVI
+
+note left of Gate
+Back-to-car is optional.
+Only high-confidence, low-latency,
+non-distracting interventions pass.
+end note
+
+note top of RiskModel
+Feature Window Vectorizer
+1-5s rolling windows
+road + driver + vehicle context
+end note
+
+@enduml

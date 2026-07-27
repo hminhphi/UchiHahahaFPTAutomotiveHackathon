@@ -1,0 +1,38 @@
+@startuml
+!theme plain
+left to right direction
+title FleetIQ Guardian - Deck-Friendly Solution Flow
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+skinparam componentStyle rectangle
+
+rectangle "1. Inputs\n\nRoad cameras\nDriver camera\nSensor fusion" as Inputs #EAF2FF
+rectangle "2. Per-source Models\n\nRoad context\nDriver state\nVehicle state" as Models #FFFFFF
+rectangle "3. Aligned Feature Windows\n\n1-5s timeline vectors\nconfidence + missing flags" as Vectors #FFF7EE
+rectangle "4. Risk Intelligence\n\nTTC + lane + driver fusion\nlearned risk detector" as Risk #F37021
+rectangle "5. Fleet Outputs\n\nTrip score\nEvent evidence\nCoaching report\nDashboard" as Outputs #EAF2FF
+
+Inputs --> Models
+Models --> Vectors
+Vectors --> Risk
+Risk --> Outputs
+
+rectangle "Verified Model Training\n\nground truth + precise rules\nhuman-reviewed labels\ntrain calibrated model" as Training #F7F8FB
+Vectors --> Training : sampled windows
+Training --> Risk : model version
+
+rectangle "Post-Inference Risk Discovery\n\nrisk embeddings -> clustering\nLLM names completed clusters\nanalytics metadata only" as Discovery #F7F8FB
+Risk --> Discovery : risk outputs
+Discovery --> Outputs : cluster labels
+
+note bottom of Risk
+Online detector is a trained lightweight model.
+LLM only names post-inference clusters.
+LLM output is never used for model training.
+end note
+
+@enduml

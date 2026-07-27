@@ -1,0 +1,52 @@
+@startuml
+!theme plain
+left to right direction
+title FleetIQ Guardian - Full Vertical Product Map
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+skinparam componentStyle rectangle
+
+rectangle "Shared Starter Dataset\n\nRoad cameras\nDriver camera\nDepth + calibration\nTelemetry / sensor fusion\nGround-truth labels" as Dataset #EAF2FF
+
+package "Core Vertical Capabilities" {
+  rectangle "1. Safe Driving Score\n\n0-100 score\nscore breakdown\ndriver/vehicle/trip ranking" as Score #FFFFFF
+  rectangle "2. Collision Risk Monitor\n\nTTC stream\nnear-miss events\nrisk severity + evidence" as TTC #FFF7EE
+  rectangle "3. Driver Intelligence\n\nDMS state\nbehavior analytics\nunified risk score" as DMS #FFFFFF
+}
+
+rectangle "FleetIQ Risk Intelligence Layer\n\ntime alignment\nmultimodal fusion\nrisk event detector\nexplainability" as Risk #F37021
+
+package "Out-Car Outputs" {
+  rectangle "Fleet Dashboard\nranking + map + alerts" as Dash #EAF2FF
+  rectangle "Trip Report\nscore + timeline + evidence" as Report #EAF2FF
+  rectangle "OEM Analytics\nJSON/PDF export + APIs" as OEM #EAF2FF
+}
+
+package "Remote Back-to-Car Bonus" {
+  rectangle "Safety Gate\nlatency budget\nconfidence threshold\nfallback policy" as Gate #FFFFFF
+  rectangle "IVI Coaching\nspeed advisory\nvoice/haptic/visual alert\npost-trip coaching" as IVI #034EA2
+}
+
+Dataset --> Score
+Dataset --> TTC
+Dataset --> DMS
+Score --> Risk
+TTC --> Risk
+DMS --> Risk
+Risk --> Dash
+Risk --> Report
+Risk --> OEM
+Risk --> Gate
+Gate --> IVI
+
+note bottom of Gate
+Back-to-car is a bonus path.
+Only high-confidence, low-latency,
+non-annoying interventions pass.
+end note
+
+@enduml
