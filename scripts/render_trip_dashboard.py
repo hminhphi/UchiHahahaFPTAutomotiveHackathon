@@ -21,6 +21,10 @@ from typing import Any, Iterable
 import cv2
 import numpy as np
 
+try:
+    from carsky_agent import compute_trip_score
+except ImportError:
+    compute_trip_score = None
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PRACTICE_ROOT = PROJECT_ROOT / "data" / "Practice_Dataset" / "Practice_Dataset"
@@ -465,6 +469,12 @@ def build_series(frames: list[dict[str, Any]]) -> dict[str, np.ndarray]:
     def values(extractor: Any) -> np.ndarray:
         return np.asarray([safe_float(extractor(frame)) for frame in frames], dtype=float)
 
+    def get_risk(frame_idx, frame):
+        if compute_trip_score:
+            history = frames[max(0, frame_idx - 10) : frame_idx]
+            return compute_trip_score(frame, history_frames=history)
+        return frame_value(frame, "risk", "final_risk_score")
+
     return {
         "timestamp": values(lambda frame: frame.get("timestamp")),
         "speed": values(lambda frame: frame_value(frame, "ego", "speed_kmh")),
@@ -475,7 +485,7 @@ def build_series(frames: list[dict[str, Any]]) -> dict[str, np.ndarray]:
             lambda frame: frame_value(frame, "ego", "lateral_accel")
         ),
         "ttc": values(lambda frame: frame.get("min_ttc")),
-        "risk": values(lambda frame: frame_value(frame, "risk", "final_risk_score")),
+        "risk": np.asarray([get_risk(i, f) for i, f in enumerate(frames)], dtype=float),
         "alertness": values(
             lambda frame: frame_value(frame, "driver", "alertness_score")
         ),
@@ -621,7 +631,22 @@ class TripRenderer:
         )
         left = draw_labels(left, labels, calibration.get("P2"), True)
         right = draw_labels(right, labels, calibration.get("P3"), False)
-
+        
+        # --- LÀM NỔI BẬT DRIVER CABIN ---
+        driver_state = frame_value(frame, "driver", "state")
+        eye_state = frame_value(frame, "driver", "eye_state")
+        mouth_state = frame_value(frame, "driver", "mouth_state")
+        
+        if driver_state == "drowsy" or eye_state == "closed":
+            cv2.rectangle(driver, (0, 0), (driver.shape[1]-1, driver.shape[0]-1), RED, 8)
+            draw_centered_text(driver, "DROWSY / EYES CLOSED", driver.shape[0] - 30, RED, 1.2)
+        elif driver_state == "distracted":
+            cv2.rectangle(driver, (0, 0), (driver.shape[1]-1, driver.shape[0]-1), RED, 8)
+            draw_centered_text(driver, "DISTRACTED", driver.shape[0] - 30, RED, 1.2)
+        elif mouth_state == "yawning":
+            cv2.rectangle(driver, (0, 0), (driver.shape[1]-1, driver.shape[0]-1), AMBER, 8)
+            draw_centered_text(driver, "YAWNING", driver.shape[0] - 30, AMBER, 1.2)
+            
         depth_id = nearest_depth_frame(self.depth_ids, frame_id, self.depth_policy)
         depth_path = (
             self.trip_dir / "kitti" / "depth" / f"{depth_id:06d}.npy"
@@ -702,7 +727,9 @@ class TripRenderer:
         ego = frame.get("ego", {}) if isinstance(frame.get("ego"), dict) else {}
         driver = frame.get("driver", {}) if isinstance(frame.get("driver"), dict) else {}
         risk = frame.get("risk", {}) if isinstance(frame.get("risk"), dict) else {}
-        score = safe_float(risk.get("final_risk_score"))
+        
+        history = self.frames[max(0, index - 10):index]
+        score = compute_trip_score(frame, history_frames=history) if compute_trip_score else safe_float(risk.get("final_risk_score"))
         ttc = safe_float(frame.get("min_ttc"))
         metrics = (
             ("Speed", format_number(ego.get("speed_kmh"), 1, " km/h"), TEXT),
@@ -725,7 +752,15 @@ class TripRenderer:
             ("Mouth", driver.get("mouth_state", "--")),
         )
         for row, (label, value) in enumerate(state_rows):
-            draw_metric(canvas, x + 14, 430 + row * 27, label, str(value))
+            val_str = str(value)
+            # Tô màu đỏ/vàng nếu trạng thái nguy hiểm
+            color = TEXT
+            if val_str in ("closed", "distracted", "drowsy"): color = RED
+            elif val_str == "yawning": color = AMBER
+            elif val_str == "attentive": color = GREEN
+            
+            draw_metric(canvas, x + 14, 430 + row * 27, label, val_str, color)
+            
         active = frame.get("events_active", [])
         event_types = []
         if isinstance(active, list):

@@ -71,6 +71,7 @@ checkpoints/
 # Research material and cloned analysis repositories
 paper/
 third_party/
+.DS_Store
 
 # Extracted office/PDF intermediates
 *_extracted/
