@@ -14,6 +14,14 @@ dependencies = [
     "pillow>=12.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
 [project.optional-dependencies]
 cu130 = [
     "torch>=2.13.0",
@@ -49,3 +57,18 @@ torchvision = [
 name = "pytorch-cu130"
 url = "https://download.pytorch.org/whl/cu130"
 explicit = true
+
+[tool.uv.workspace]
+members = [
+    "apps/*",
+    "services/*",
+    "packages/*",
+    "ml/training/*",
+    "infra/*",
+]
+exclude = [
+    "apps/web",
+    "apps/carsky-hmi",
+    "infra/compose",
+    "infra/docker",
+]

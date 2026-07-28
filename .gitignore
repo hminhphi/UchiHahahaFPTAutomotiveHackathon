@@ -27,6 +27,7 @@ env/
 .vscode/
 .opencode/
 .codex/
+.superpowers/
 opencode.json
 *.swp
 *.swo
@@ -37,8 +38,10 @@ Desktop.ini
 .ipynb_checkpoints/
 
 # Dataset and generated outputs
-data/
-artifacts/
+data/*
+!data/README.md
+artifacts/*
+!artifacts/README.md
 runs/
 wandb/
 mlruns/
@@ -71,6 +74,8 @@ checkpoints/
 # Research material and cloned analysis repositories
 paper/
 third_party/
+research/papers/raw/
+research/third-party/
 
 # Extracted office/PDF intermediates
 *_extracted/
