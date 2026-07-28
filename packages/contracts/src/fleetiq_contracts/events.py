@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from typing import Literal
-from uuid import UUID
 
 from pydantic import Field, field_validator
 
@@ -10,6 +9,8 @@ from .base import (
     ArtifactReference,
     ContractModel,
     EventEnvelope,
+    JsonUUID,
+    RFC3339DateTime,
     VersionedModel,
     validate_mqtt_segment,
 )
@@ -43,12 +44,12 @@ class TelemetryEvent(EventEnvelope):
 class RiskEvent(EventEnvelope):
     """An explainable collision or driving-risk assessment."""
 
-    event_id: UUID
+    event_id: JsonUUID
     event_type: str = Field(min_length=1)
     severity: int = Field(ge=1, le=5)
     confidence: float = Field(ge=0, le=1)
     explanation: str = Field(min_length=1)
-    evidence: tuple[EvidenceReference, ...] = ()
+    evidence: tuple[EvidenceReference, ...] = Field(default=(), strict=False)
 
     @field_validator("event_type")
     @classmethod
@@ -59,12 +60,12 @@ class RiskEvent(EventEnvelope):
 class CoachingCommand(VersionedModel):
     """A finite, deduplicated instruction for an in-vehicle coaching channel."""
 
-    command_id: UUID
-    event_id: UUID
+    command_id: JsonUUID
+    event_id: JsonUUID
     correlation_id: str
     vehicle_id: str
-    created_at: datetime
-    expires_at: datetime
+    created_at: RFC3339DateTime
+    expires_at: RFC3339DateTime
     channel: Literal["visual", "voice", "post_trip"]
     priority: int = Field(ge=1, le=5)
     title: str = Field(min_length=1, max_length=120)
@@ -94,11 +95,11 @@ class CoachingCommand(VersionedModel):
 class CoachingAck(VersionedModel):
     """An acknowledgement emitted by the target vehicle after command handling."""
 
-    ack_id: UUID
-    command_id: UUID
+    ack_id: JsonUUID
+    command_id: JsonUUID
     correlation_id: str
     vehicle_id: str
-    acknowledged_at: datetime
+    acknowledged_at: RFC3339DateTime
     status: Literal["accepted", "displayed", "dismissed", "expired", "failed"]
     detail: str | None = Field(default=None, min_length=1)
 

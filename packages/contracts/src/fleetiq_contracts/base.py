@@ -3,10 +3,12 @@
 from datetime import datetime
 from typing import Annotated, Literal
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from pydantic import (
     AfterValidator,
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     StringConstraints,
     field_validator,
@@ -48,11 +50,29 @@ def validate_artifact_reference(value: str) -> str:
     raise ValueError("artifact references must use s3://, https://, file://, artifacts/, or data/")
 
 
+def parse_json_uuid(value: object) -> object:
+    """Accept UUID strings emitted by JSON serializers without relaxing scalar strictness."""
+    if isinstance(value, str):
+        return UUID(value)
+    return value
+
+
+def parse_json_datetime(value: object) -> object:
+    """Accept RFC3339 timestamp strings emitted by JSON serializers."""
+    if isinstance(value, str):
+        if "T" not in value:
+            raise ValueError("timestamps must use RFC3339 date-time form")
+        return datetime.fromisoformat(value)
+    return value
+
+
 ArtifactReference = Annotated[
     str,
     StringConstraints(min_length=1, max_length=2048, pattern=_ARTIFACT_REFERENCE_PATTERN),
     AfterValidator(validate_artifact_reference),
 ]
+JsonUUID = Annotated[UUID, BeforeValidator(parse_json_uuid)]
+RFC3339DateTime = Annotated[datetime, BeforeValidator(parse_json_datetime)]
 
 
 class ContractModel(BaseModel):
@@ -75,7 +95,7 @@ class EventEnvelope(VersionedModel):
     trip_id: str
     frame_index: int
     producer: str
-    occurred_at: datetime
+    occurred_at: RFC3339DateTime
 
     @field_validator("trip_id", "producer")
     @classmethod

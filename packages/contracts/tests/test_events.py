@@ -1,9 +1,17 @@
+import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from fleetiq_contracts.events import EvidenceReference, RiskEvent
+from fleetiq_contracts.base import EventEnvelope
+from fleetiq_contracts.events import (
+    CoachingAck,
+    CoachingCommand,
+    EvidenceReference,
+    RiskEvent,
+    TelemetryEvent,
+)
 from fleetiq_contracts.inference import (
     BoundingBox,
     DepthState,
@@ -13,7 +21,7 @@ from fleetiq_contracts.inference import (
     InferenceResponse,
     LaneState,
 )
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 
 def test_risk_event_round_trip_keeps_trace_fields() -> None:
@@ -37,6 +45,115 @@ def test_risk_event_round_trip_keeps_trace_fields() -> None:
 
     assert restored.event_id == event_id
     assert restored.frame_index == 100
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        EventEnvelope(
+            schema_version="1.0",
+            event_id="event-1",
+            correlation_id="T01-Sample:100",
+            trip_id="T01-Sample",
+            frame_index=100,
+            producer="fusion-worker",
+            occurred_at=datetime(2026, 7, 28, tzinfo=UTC),
+        ),
+        TelemetryEvent(
+            schema_version="1.0",
+            event_id="event-2",
+            correlation_id="T01-Sample:100",
+            trip_id="T01-Sample",
+            frame_index=100,
+            producer="telemetry-worker",
+            occurred_at=datetime(2026, 7, 28, tzinfo=UTC),
+            event_type="vehicle_state",
+            speed_mps=12.5,
+        ),
+        RiskEvent(
+            schema_version="1.0",
+            event_id=uuid4(),
+            correlation_id="T01-Sample:100",
+            trip_id="T01-Sample",
+            frame_index=100,
+            producer="fusion-worker",
+            occurred_at=datetime(2026, 7, 28, tzinfo=UTC),
+            event_type="short_ttc",
+            severity=4,
+            confidence=0.91,
+            explanation="TTC below 1.5 seconds",
+            evidence=(EvidenceReference(artifact_uri="artifacts/T01-Sample/000100.jpg"),),
+        ),
+        CoachingCommand(
+            schema_version="1.0",
+            command_id=uuid4(),
+            event_id=uuid4(),
+            correlation_id="T01-Sample:100",
+            vehicle_id="vehicle-a",
+            created_at=datetime(2026, 7, 28, tzinfo=UTC),
+            expires_at=datetime(2026, 7, 28, 0, 1, tzinfo=UTC),
+            channel="visual",
+            priority=4,
+            title="Brake",
+            message="Brake now",
+            dedupe_key="T01-Sample:100:short_ttc",
+        ),
+        CoachingAck(
+            schema_version="1.0",
+            ack_id=uuid4(),
+            command_id=uuid4(),
+            correlation_id="T01-Sample:100",
+            vehicle_id="vehicle-a",
+            acknowledged_at=datetime(2026, 7, 28, tzinfo=UTC),
+            status="accepted",
+        ),
+        InferenceRequest(
+            schema_version="1.0",
+            request_id=uuid4(),
+            correlation_id="T01-Sample:100",
+            trip_id="T01-Sample",
+            frame_index=100,
+            producer="roadface-worker",
+            occurred_at=datetime(2026, 7, 28, tzinfo=UTC),
+            model_name="roadface-v1",
+            frame_artifact_uri="artifacts/T01-Sample/000100.jpg",
+            camera_view="road_left",
+        ),
+        InferenceResponse(
+            schema_version="1.0",
+            request_id=uuid4(),
+            correlation_id="T01-Sample:100",
+            trip_id="T01-Sample",
+            frame_index=100,
+            producer="roadface-model",
+            occurred_at=datetime(2026, 7, 28, tzinfo=UTC),
+            detections=(
+                Detection(
+                    track_id="lead-vehicle-1",
+                    label="car",
+                    bounding_box=BoundingBox(x_min=10, y_min=20, x_max=110, y_max=120),
+                    confidence=0.98,
+                ),
+            ),
+        ),
+    ],
+    ids=(
+        "event-envelope",
+        "telemetry-event",
+        "risk-event",
+        "coaching-command",
+        "coaching-ack",
+        "inference-request",
+        "inference-response",
+    ),
+)
+def test_public_payloads_accept_decoded_json_mappings(payload: BaseModel) -> None:
+    """Decoded MQTT and HTTP JSON mappings must preserve standard UUIDs and timestamps."""
+    decoded_payload = json.loads(payload.model_dump_json())
+
+    restored = type(payload).model_validate(decoded_payload)
+
+    assert restored == payload
 
 
 @pytest.mark.parametrize("field, value", [("severity", 0), ("severity", 6), ("confidence", 1.1)])

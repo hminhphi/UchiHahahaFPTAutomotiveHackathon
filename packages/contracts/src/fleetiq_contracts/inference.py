@@ -2,13 +2,14 @@
 
 from datetime import datetime
 from typing import Literal
-from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
 from .base import (
     ArtifactReference,
     ContractModel,
+    JsonUUID,
+    RFC3339DateTime,
     VersionedModel,
     validate_mqtt_segment,
 )
@@ -73,12 +74,12 @@ class DriverState(ContractModel):
 class InferenceRequest(VersionedModel):
     """A request that references a frame artifact instead of carrying image bytes."""
 
-    request_id: UUID
+    request_id: JsonUUID
     correlation_id: str
     trip_id: str
     frame_index: int = Field(ge=0)
     producer: str
-    occurred_at: datetime
+    occurred_at: RFC3339DateTime
     model_name: str
     frame_artifact_uri: ArtifactReference
     camera_view: Literal["road_left", "road_right", "driver"]
@@ -106,13 +107,13 @@ class InferenceRequest(VersionedModel):
 class InferenceResponse(VersionedModel):
     """A typed inference result with no unstructured model-output dictionaries."""
 
-    request_id: UUID
+    request_id: JsonUUID
     correlation_id: str
     trip_id: str
     frame_index: int = Field(ge=0)
     producer: str
-    occurred_at: datetime
-    detections: tuple[Detection, ...] = ()
+    occurred_at: RFC3339DateTime
+    detections: tuple[Detection, ...] = Field(default=(), strict=False)
     lane_state: LaneState | None = None
     depth_state: DepthState | None = None
     driver_state: DriverState | None = None
