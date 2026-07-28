@@ -1,0 +1,893 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "additionalProperties": false,
+      "description": "Image-space detection coordinates in pixels.",
+      "properties": {
+        "x_min": {
+          "minimum": 0,
+          "title": "X Min",
+          "type": "number"
+        },
+        "y_min": {
+          "minimum": 0,
+          "title": "Y Min",
+          "type": "number"
+        },
+        "x_max": {
+          "minimum": 0,
+          "title": "X Max",
+          "type": "number"
+        },
+        "y_max": {
+          "minimum": 0,
+          "title": "Y Max",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x_min",
+        "y_min",
+        "x_max",
+        "y_max"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "CoachingAck": {
+      "additionalProperties": false,
+      "description": "An acknowledgement emitted by the target vehicle after command handling.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "ack_id": {
+          "format": "uuid",
+          "title": "Ack Id",
+          "type": "string"
+        },
+        "command_id": {
+          "format": "uuid",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "vehicle_id": {
+          "title": "Vehicle Id",
+          "type": "string"
+        },
+        "acknowledged_at": {
+          "format": "date-time",
+          "title": "Acknowledged At",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "displayed",
+            "dismissed",
+            "expired",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        }
+      },
+      "required": [
+        "ack_id",
+        "command_id",
+        "correlation_id",
+        "vehicle_id",
+        "acknowledged_at",
+        "status"
+      ],
+      "title": "CoachingAck",
+      "type": "object"
+    },
+    "CoachingCommand": {
+      "additionalProperties": false,
+      "description": "A finite, deduplicated instruction for an in-vehicle coaching channel.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "command_id": {
+          "format": "uuid",
+          "title": "Command Id",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "vehicle_id": {
+          "title": "Vehicle Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "channel": {
+          "enum": [
+            "visual",
+            "voice",
+            "post_trip"
+          ],
+          "title": "Channel",
+          "type": "string"
+        },
+        "priority": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "title": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "dedupe_key": {
+          "minLength": 1,
+          "title": "Dedupe Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "command_id",
+        "event_id",
+        "correlation_id",
+        "vehicle_id",
+        "created_at",
+        "expires_at",
+        "channel",
+        "priority",
+        "title",
+        "message",
+        "dedupe_key"
+      ],
+      "title": "CoachingCommand",
+      "type": "object"
+    },
+    "DepthState": {
+      "additionalProperties": false,
+      "description": "A typed depth estimate without embedding depth-map bytes.",
+      "properties": {
+        "source": {
+          "enum": [
+            "ground_truth",
+            "stereo",
+            "geometry",
+            "temporal"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "median_depth_m": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median Depth M"
+        },
+        "valid_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Valid Coverage",
+          "type": "number"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "artifact_uri": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Uri"
+        }
+      },
+      "required": [
+        "source",
+        "valid_coverage",
+        "confidence"
+      ],
+      "title": "DepthState",
+      "type": "object"
+    },
+    "Detection": {
+      "additionalProperties": false,
+      "description": "A typed object detection, with optional spatial risk measurements.",
+      "properties": {
+        "track_id": {
+          "minLength": 1,
+          "title": "Track Id",
+          "type": "string"
+        },
+        "label": {
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "bounding_box": {
+          "$ref": "#/$defs/BoundingBox"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "distance_m": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance M"
+        },
+        "relative_speed_mps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relative Speed Mps"
+        },
+        "ttc_s": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ttc S"
+        }
+      },
+      "required": [
+        "track_id",
+        "label",
+        "bounding_box",
+        "confidence"
+      ],
+      "title": "Detection",
+      "type": "object"
+    },
+    "DriverState": {
+      "additionalProperties": false,
+      "description": "A typed driver-attention estimate for one frame.",
+      "properties": {
+        "state": {
+          "enum": [
+            "attentive",
+            "distracted",
+            "drowsy",
+            "unknown"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "eye_closure": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eye Closure"
+        },
+        "phone_use": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phone Use"
+        },
+        "evidence_uri": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Uri"
+        }
+      },
+      "required": [
+        "state",
+        "confidence"
+      ],
+      "title": "DriverState",
+      "type": "object"
+    },
+    "EventEnvelope": {
+      "additionalProperties": false,
+      "description": "Trace fields shared by telemetry and risk events.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "trip_id": {
+          "title": "Trip Id",
+          "type": "string"
+        },
+        "frame_index": {
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "correlation_id",
+        "trip_id",
+        "frame_index",
+        "producer",
+        "occurred_at"
+      ],
+      "title": "EventEnvelope",
+      "type": "object"
+    },
+    "EvidenceReference": {
+      "additionalProperties": false,
+      "description": "An external artifact reference; MQTT never carries camera bytes.",
+      "properties": {
+        "artifact_uri": {
+          "minLength": 1,
+          "title": "Artifact Uri",
+          "type": "string"
+        },
+        "frame_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frame Index"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "artifact_uri"
+      ],
+      "title": "EvidenceReference",
+      "type": "object"
+    },
+    "InferenceRequest": {
+      "additionalProperties": false,
+      "description": "A request that references a frame artifact instead of carrying image bytes.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "trip_id": {
+          "title": "Trip Id",
+          "type": "string"
+        },
+        "frame_index": {
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "model_name": {
+          "title": "Model Name",
+          "type": "string"
+        },
+        "frame_artifact_uri": {
+          "minLength": 1,
+          "title": "Frame Artifact Uri",
+          "type": "string"
+        },
+        "camera_view": {
+          "enum": [
+            "road_left",
+            "road_right",
+            "driver"
+          ],
+          "title": "Camera View",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "trip_id",
+        "frame_index",
+        "producer",
+        "occurred_at",
+        "model_name",
+        "frame_artifact_uri",
+        "camera_view"
+      ],
+      "title": "InferenceRequest",
+      "type": "object"
+    },
+    "InferenceResponse": {
+      "additionalProperties": false,
+      "description": "A typed inference result with no unstructured model-output dictionaries.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "trip_id": {
+          "title": "Trip Id",
+          "type": "string"
+        },
+        "frame_index": {
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "detections": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Detection"
+          },
+          "title": "Detections",
+          "type": "array"
+        },
+        "lane_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LaneState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "depth_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DepthState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "driver_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DriverState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "trip_id",
+        "frame_index",
+        "producer",
+        "occurred_at"
+      ],
+      "title": "InferenceResponse",
+      "type": "object"
+    },
+    "LaneState": {
+      "additionalProperties": false,
+      "description": "A typed road-lane estimate for one frame.",
+      "properties": {
+        "detected": {
+          "title": "Detected",
+          "type": "boolean"
+        },
+        "lane_offset_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lane Offset M"
+        },
+        "heading_error_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heading Error Deg"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "detected",
+        "confidence"
+      ],
+      "title": "LaneState",
+      "type": "object"
+    },
+    "RiskEvent": {
+      "additionalProperties": false,
+      "description": "An explainable collision or driving-risk assessment.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "trip_id": {
+          "title": "Trip Id",
+          "type": "string"
+        },
+        "frame_index": {
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "event_type": {
+          "minLength": 1,
+          "title": "Event Type",
+          "type": "string"
+        },
+        "severity": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Severity",
+          "type": "integer"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "explanation": {
+          "minLength": 1,
+          "title": "Explanation",
+          "type": "string"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceReference"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "event_id",
+        "correlation_id",
+        "trip_id",
+        "frame_index",
+        "producer",
+        "occurred_at",
+        "event_type",
+        "severity",
+        "confidence",
+        "explanation"
+      ],
+      "title": "RiskEvent",
+      "type": "object"
+    },
+    "TelemetryEvent": {
+      "additionalProperties": false,
+      "description": "A normalized vehicle telemetry observation or detected driving behavior.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "trip_id": {
+          "title": "Trip Id",
+          "type": "string"
+        },
+        "frame_index": {
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "producer": {
+          "title": "Producer",
+          "type": "string"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "event_type": {
+          "enum": [
+            "vehicle_state",
+            "speeding",
+            "harsh_brake",
+            "harsh_steering",
+            "lane_departure"
+          ],
+          "title": "Event Type",
+          "type": "string"
+        },
+        "speed_mps": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Speed Mps"
+        },
+        "longitudinal_accel_mps2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Longitudinal Accel Mps2"
+        },
+        "lateral_accel_mps2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lateral Accel Mps2"
+        },
+        "yaw_rate_radps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Yaw Rate Radps"
+        },
+        "speed_limit_mps": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Speed Limit Mps"
+        }
+      },
+      "required": [
+        "event_id",
+        "correlation_id",
+        "trip_id",
+        "frame_index",
+        "producer",
+        "occurred_at",
+        "event_type"
+      ],
+      "title": "TelemetryEvent",
+      "type": "object"
+    }
+  },
+  "title": "FleetIQ Protocols v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
