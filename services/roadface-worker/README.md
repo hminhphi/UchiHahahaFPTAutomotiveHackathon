@@ -1,0 +1,29 @@
+# FleetIQ Roadface Worker
+
+Installable CPU-safe road-facing runtime for frame orchestration, depth,
+lane estimation, object tracking, relative speed, and TTC.
+
+The worker consumes explicit FleetIQ dataset records and emits strict
+`InferenceResponse` payloads. Dataset roots, output paths, and optional model
+clients are supplied by callers; no data, artifacts, or model weights are
+packaged with the service.
+
+Run one Practice frame from the repository root:
+
+```powershell
+uv run --package fleetiq-roadface fleetiq-roadface `
+  --dataset practice --trip T01-Sample --start 0 --end 0 --depth-source gt
+```
+
+The default output is
+`artifacts/predictions/roadface/<trip-id>/<frame-index>.json`. Use
+`--dataset-root` and `--output-dir` to inject different locations. Python
+callers instantiate `RoadfacePipeline` with `DatasetPaths`, an output root, and
+optional detector/depth clients.
+
+Validate the package:
+
+```powershell
+uv run --package fleetiq-roadface pytest services/roadface-worker/tests -v
+uv run ruff check services/roadface-worker
+```

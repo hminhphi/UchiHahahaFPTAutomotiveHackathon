@@ -5,8 +5,7 @@ from types import SimpleNamespace
 
 import cv2
 import numpy as np
-
-from scripts.roadface.carnd_lane_tracker import (
+from fleetiq_roadface.birdseye import (
     _perspective_matrices,
     detect_birdseye_lane,
 )
@@ -87,7 +86,9 @@ class BirdEyeLaneTrackerTests(unittest.TestCase):
         self.assertIsNotNone(result)
         assert result is not None
         sample_y = np.linspace(20, 340, 16)
-        widths = np.polyval(result.right_fit, sample_y) - np.polyval(result.left_fit, sample_y)
+        widths = np.polyval(result.right_fit, sample_y) - np.polyval(
+            result.left_fit, sample_y
+        )
         self.assertLess(float(np.std(widths)), 1.0)
         self.assertIn("infer_right", result.status)
         self.assertLess(abs(result.offset_m), 0.25)
