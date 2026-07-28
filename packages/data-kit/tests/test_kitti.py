@@ -32,3 +32,28 @@ def test_find_frame_resolves_images_and_sparse_depth(tmp_path: Path) -> None:
     assert find_frame(images, 7) == images / "000007.png"
     assert find_frame(depth, 7, suffixes=(".npy",), policy="previous") == depth / "000000.npy"
     assert find_frame(depth, 7, suffixes=(".npy",), policy="nearest") == depth / "000010.npy"
+
+
+def test_parse_kitti_labels_skips_non_finite_and_fractional_occlusion_rows(tmp_path: Path) -> None:
+    labels = tmp_path / "000007.txt"
+    labels.write_text(
+        "Car 0.0 1.5 0.1 10 20 30 40 1.5 1.6 4.0 1.0 1.5 12.0 0.2\n"
+        "Car nan 0 0.1 10 20 30 40 1.5 1.6 4.0 1.0 1.5 12.0 0.2\n"
+        "Car 0.0 0 0.1 10 20 30 40 1.5 1.6 4.0 1.0 1.5 12.0 0.2 inf\n"
+        "Car 0.0 2 0.1 10 20 30 40 1.5 1.6 4.0 1.0 1.5 12.0 0.2\n",
+        encoding="utf-8",
+    )
+
+    parsed = parse_kitti_labels(labels)
+
+    assert len(parsed) == 1
+    assert parsed[0].occluded == 2
+
+
+def test_find_frame_previous_does_not_use_a_future_frame(tmp_path: Path) -> None:
+    depth = tmp_path / "depth"
+    depth.mkdir()
+    (depth / "000010.npy").touch()
+
+    assert find_frame(depth, 5, suffixes=(".npy",), policy="previous") is None
+    assert find_frame(depth, 5, suffixes=(".npy",), policy="nearest") == depth / "000010.npy"

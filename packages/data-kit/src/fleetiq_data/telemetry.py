@@ -30,9 +30,11 @@ def normalize_telemetry(frames: Sequence[Mapping[str, Any]]) -> list[TelemetryFr
         TelemetryFrame(
             frame_id=index,
             timestamp_s=_finite_float(frame.get("timestamp")),
-            speed_mps=_finite_float(_nested_value(frame, "ego", "speed_mps"))
-            or _finite_float(frame.get("speed"))
-            or _kmh_to_mps(_nested_value(frame, "ego", "speed_kmh")),
+            speed_mps=_first_non_none(
+                _finite_float(_nested_value(frame, "ego", "speed_mps")),
+                _finite_float(frame.get("speed")),
+                _kmh_to_mps(_nested_value(frame, "ego", "speed_kmh")),
+            ),
             longitudinal_accel_mps2=_finite_float(
                 _nested_value(frame, "ego", "longitudinal_accel")
             ),
@@ -65,6 +67,10 @@ def _finite_float(value: Any) -> float | None:
 def _kmh_to_mps(value: Any) -> float | None:
     parsed = _finite_float(value)
     return parsed / 3.6 if parsed is not None else None
+
+
+def _first_non_none(*values: float | None) -> float | None:
+    return next((value for value in values if value is not None), None)
 
 
 def _string_or_none(value: Any) -> str | None:

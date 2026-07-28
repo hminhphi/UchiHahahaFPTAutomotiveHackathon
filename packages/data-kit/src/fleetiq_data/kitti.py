@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -36,6 +37,10 @@ def parse_kitti_labels(path: Path) -> list[KittiObject]:
         try:
             values = [float(value) for value in fields[1:]]
         except ValueError:
+            continue
+        if not all(math.isfinite(value) for value in values):
+            continue
+        if not values[1].is_integer():
             continue
         objects.append(
             KittiObject(
@@ -75,7 +80,9 @@ def find_frame(
     available = sorted(candidates)
     if policy == "previous":
         prior = [value for value in available if value <= frame_id]
-        selected = prior[-1] if prior else available[0]
+        if not prior:
+            return None
+        selected = prior[-1]
     else:
         selected = min(available, key=lambda value: (abs(value - frame_id), value))
     return candidates[selected]

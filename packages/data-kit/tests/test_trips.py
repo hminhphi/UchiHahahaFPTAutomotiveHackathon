@@ -55,6 +55,26 @@ def test_normalize_telemetry_keeps_frame_order_and_finite_numbers() -> None:
     assert telemetry[1].driver_state == "distracted"
 
 
+def test_normalize_telemetry_preserves_zero_values_over_legacy_fallbacks() -> None:
+    telemetry = normalize_telemetry(
+        [
+            {
+                "speed": 12.5,
+                "ego": {
+                    "speed_mps": 0.0,
+                    "speed_kmh": 36.0,
+                    "longitudinal_accel": 0.0,
+                    "lateral_accel": 0.0,
+                },
+            }
+        ]
+    )
+
+    assert telemetry[0].speed_mps == 0.0
+    assert telemetry[0].longitudinal_accel_mps2 == 0.0
+    assert telemetry[0].lateral_accel_mps2 == 0.0
+
+
 def test_trip_cli_does_not_preimport_its_module(tmp_path: Path) -> None:
     completed = subprocess.run(
         [
