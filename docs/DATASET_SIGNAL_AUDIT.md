@@ -1,6 +1,6 @@
 # Kiểm Tra Tín Hiệu Practice Dataset
 
-**Ngày kiểm tra:** 28/07/2026  
+**Ngày kiểm tra:** 28/07/2026
 **Phạm vi:** `data/Practice_Dataset/Practice_Dataset`, 6 trip từ `T01-Sample` đến `T06-Sample`
 
 ## 1. Độ phủ dữ liệu
