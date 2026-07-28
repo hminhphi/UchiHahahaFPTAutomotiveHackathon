@@ -25,6 +25,10 @@ The plan follows the organizer's C0-C3 delivery gates. Work is not divided into 
 
 - One Practice Dataset trip runs end-to-end through Road-facing, DMS, Fusion, Safety Gate, and CarSky IVI Coaching.
 - Road-facing output contains tracked obstacle, distance, relative speed, TTC, confidence, and evidence frame.
+- Stereo depth runs at camera rate from the 30 cm baseline pair and reports a per-pixel validity/confidence mask.
+- Vehicle dynamics produces a filtered fast-corner event from speed, longitudinal acceleration, lateral acceleration, and yaw rate.
+- Every trip has a trajectory visualization whose segment color represents speed and whose event markers expose longitudinal/lateral acceleration.
+- Road/lane processing uses an IMU-aware horizon derived from camera intrinsics plus filtered pitch/roll telemetry.
 - DMS output uses the normalized states `attentive`, `distracted`, `drowsy`, and `unknown`.
 - Fusion produces canonical risk events with severity, confidence, explanation, and source references.
 - Safety Gate suppresses low-confidence, stale, duplicate, or distracting interventions.
@@ -56,7 +60,7 @@ Nice-to-have issues remain outside the critical path and may only start after th
 |---|---|---|---|
 | **C0 Recovery** | 2026-07-28 | One-page scope and risk register | Must-have, nice-to-have, stack, GPU/API/CarSky needs, and top risks are committed to the repository. |
 | **C1 Recovery** | 2026-07-29 | Five-minute skeleton demo and one-page progress report | One trip traverses every interface. Road-facing may use current outputs, DMS may use a deterministic stub, and CarSky may use a mock adapter. Every stub is visibly marked. |
-| **C2 Midterm** | 2026-08-03 | Ten-minute live/video demo on the platform and initial KPI report | Road-facing and DMS use real inference outputs; Fusion generates at least one compound event; one coaching command reaches CarSky; initial KPI values are reproducible. |
+| **C2 Midterm** | 2026-08-03 | Ten-minute live/video demo on the platform and initial KPI report | Road-facing and DMS use real inference outputs; one trip shows stereo depth, trajectory, fast-corner/hard-driving context, and adjusted horizon; Fusion generates at least one compound event; one coaching command reaches CarSky; initial KPI values are reproducible. |
 | **C3 Code Freeze** | 2026-08-08 | Clean test run, three-minute uncut demo video, and pitch slides | Demo succeeds three consecutive times from frozen inputs. Required tests pass. No critical issue remains open. |
 | **Submission** | 2026-08-10 | Final package | Only submission metadata, video, documentation, and pitch corrections are allowed after code freeze. |
 
@@ -66,13 +70,13 @@ The team works four to six hours per person per day. Planning uses a conservativ
 
 | Owner | GitHub | Primary responsibility | C1 | C2 | C3 | Total |
 |---|---|---|---:|---:|---:|---:|
-| Tư | `four2k3` | Integration runner, event API, CarSky Blueprint/REST/AAOS bridge | 10h | 22h | 16h | 48h |
-| Phi | `babynghe2003` | Road-facing, distance/TTC, ego-path filtering, vehicle signals | 10h | 20h | 16h | 46h |
+| Tư | `four2k3` | Integration runner, event API, trajectory UI, CarSky Blueprint/REST/AAOS bridge | 10h | 26h | 16h | 52h |
+| Phi | `babynghe2003` | Road-facing, stereo depth, horizon, distance/TTC, ego-path filtering | 10h | 30h | 18h | 58h |
 | Trung | `hoangtrung1801` | DMS inference, state normalization, smoothing, confidence | 8h | 20h | 16h | 44h |
-| Kha | `khaphan11` | Time alignment, multimodal fusion, scoring, KPI evaluation | 8h | 20h | 18h | 46h |
+| Kha | `khaphan11` | Vehicle dynamics, time alignment, multimodal fusion, scoring, KPI evaluation | 8h | 26h | 20h | 54h |
 | Dũng | `VKUNeMo` | Coaching policy/NLP, IVI content, demo narrative | 6h | 18h | 18h | 42h |
 
-Total committed implementation effort is 226 hours before code freeze. Remaining capacity is reserved for integration and recovery rather than pre-assigned feature work.
+Total committed implementation effort is 250 hours before code freeze. At an average of five hours per person per day, the team has approximately 300 hours through code freeze, preserving roughly 50 hours for integration and recovery.
 
 ## 5. System Design
 
@@ -82,6 +86,7 @@ Total committed implementation effort is 226 hours before code freeze. Remaining
 Practice Dataset
   -> Road-facing inference --------\
   -> DMS inference -----------------+-> Time Alignment
+  -> Vehicle dynamics --------------+       |
   -> Telemetry normalization -------/       |
                                              v
                                      Compound Risk Engine
@@ -110,6 +115,36 @@ All modules communicate through versioned JSON-serializable records. Missing val
 - `timestamp_ms`
 - `ego_speed_mps`
 - `source_paths`
+
+`VehicleStateSignal`:
+
+- `speed_mps`
+- `longitudinal_accel_mps2`
+- `lateral_accel_mps2`
+- `location_xyz_m`
+- `yaw_pitch_roll_deg`
+- `yaw_rate_radps`
+- `speed_limit_mps`
+- `quality_flags`
+
+`DepthEstimate`:
+
+- `source`: `ground_truth`, `stereo`, `geometry`, or `temporal`
+- `depth_artifact_path`
+- `validity_artifact_path`
+- `confidence_artifact_path`
+- `valid_coverage`
+- `median_confidence`
+- `frame_index`
+- `calibration_id`
+
+`HorizonEstimate`:
+
+- `line_abc`
+- `pitch_deg`
+- `roll_deg`
+- `mount_bias_deg`
+- `confidence`
 
 `RoadRiskSignal`:
 
@@ -157,6 +192,17 @@ All modules communicate through versioned JSON-serializable records. Missing val
 - `expires_at_ms`
 - `dedupe_key`
 
+`TripTrajectory`:
+
+- `trip_id`
+- `timestamps_ms`
+- `xy_m`
+- `speed_mps`
+- `longitudinal_accel_mps2`
+- `lateral_accel_mps2`
+- `yaw_deg`
+- `event_ids`
+
 ### 5.3 Safety Gate
 
 The Safety Gate is deterministic and testable. A real-time coaching command is sent only when:
@@ -169,7 +215,29 @@ The Safety Gate is deterministic and testable. A real-time coaching command is s
 
 Events that fail the gate are retained for dashboard or post-trip coaching. No module sends vehicle-control commands.
 
-### 5.4 CarSky Integration
+### 5.4 Vehicle Dynamics and Trajectory
+
+World `location.x/y` is the trajectory source of truth. It must not be reconstructed by integrating acceleration because the measured world path agrees with reported speed to within 0.006-0.014 m/s MAE across the six trips.
+
+The fast-corner baseline uses a five-frame median filter, physical plausibility checks, a minimum speed, a sustained event window, hysteresis, and cooldown. Initial candidate thresholds are 20 km/h and `|lateral_accel| >= 2.5 m/s²` for at least 0.25 seconds. Critical severity begins at `|lateral_accel| >= 4.0 m/s²` or when strong longitudinal deceleration overlaps high lateral acceleration. Thresholds are tuned against `behavior_flags.harsh_corner` and are not presented as legal safety limits.
+
+The trip map uses location relative to the first frame with equal-axis geometry. Segment color encodes speed; marker size or intensity encodes acceleration magnitude. Harsh braking, fast corner, short TTC, and DMS events appear as explicit markers with timestamped evidence.
+
+### 5.5 Stereo Depth and Dynamic Horizon
+
+The stereo pair is rectified at 640×360 with `fx=fy=320 px`, principal point `(320,180)`, and baseline `0.30 m`. Calibration is constant across all frames and trips. Stereo depth follows:
+
+```text
+depth_m = 320 * 0.30 / disparity_px
+```
+
+Depth ground truth exists every five frames at 5 Hz, while stereo images exist at 20 Hz. Ground truth evaluates and calibrates stereo; it is not silently copied into missing frames. Stereo output includes left-right consistency, validity, and confidence. Invalid sky, low-texture, and occluded pixels remain invalid. Object distance uses an eroded lower/central ROI and robust quantiles.
+
+The initial 30-frame SGBM audit achieved mean trip-level coverage of 67.2% and median absolute error of approximately 0.37 m. T03 night/rain is the known worst domain and must be represented in tests.
+
+Dynamic horizon uses `P2` intrinsics and per-frame `ego.rotation.pitch/roll`. `Tr_imu_to_velo`, `Tr_velo_to_cam`, and `R0_rect` provide the rotation chain but are identity in this dataset; they do not contain dynamic IMU readings. The implementation transforms gravity into camera coordinates and computes `line = K^-T * gravity_camera`, removes a robust mount bias, and smooths pitch/roll before updating road/lane ROI. Yaw does not move the horizon.
+
+### 5.6 CarSky Integration
 
 CarSky follows the platform model documented in `docs/Car-Sky-Platform.html`:
 
@@ -198,7 +266,11 @@ Initial C2 KPIs use a frozen, manually audited sample so results are reproducibl
 | Area | KPI | C2 reporting rule |
 |---|---|---|
 | Road-facing | Detection precision/recall and distance MAE | Report by obstacle class on the audited sample; compare distance against organizer depth/ground truth where available. |
+| Stereo depth | Valid coverage, median AE, mean AE, and AbsRel | Evaluate all available 5 Hz depth frames by trip and report day/night/rain separately. |
 | Collision risk | TTC event precision/recall | Evaluate threshold crossings on labeled event windows, not isolated frames. |
+| Vehicle dynamics | Fast-corner precision/recall and false alerts/min | Compare event windows with `behavior_flags.harsh_corner` after physical filtering. |
+| Trajectory | Speed consistency and render completeness | Compare location-derived speed with telemetry and require one valid map artifact per trip. |
+| Horizon | Ground-plane residual and temporal jitter | Compare fixed versus adjusted horizon on road-plane support, including T03 pitch outliers. |
 | DMS | Macro-F1 and state transition rate | Report four-state macro-F1 plus transitions per minute to expose flicker. |
 | Fusion | Compound-event precision | Manually review every emitted compound event in the frozen demo trip. |
 | CarSky | Delivery success rate and p95 latency | Replay at least 20 commands; target at least 95% delivery and p95 event-to-display latency at or below 1,000 ms. |
@@ -218,9 +290,12 @@ src/fleetiq/
   contracts/          FrameContext and versioned signal/event schemas
   dms/                normalized DMS adapter interface
   roadface/           normalized Road-facing adapter interface
+  geometry/           stereo depth, calibration, horizon and road geometry
+  vehicle/            dynamics filtering, fast-corner events and trajectory
   fusion/             alignment, risk rules, scoring, safety gate
   carsky/             mock and real CarSky adapters
   demo/               end-to-end orchestration and replay CLI
+  visualization/      trip trajectory and evidence rendering
 configs/
   demo.yaml
   risk_thresholds.yaml
@@ -294,7 +369,7 @@ Create Project v2 named **FleetIQ Guardian - BTC Milestone Execution** and link 
 
 - `Status`: Backlog, Ready, In Progress, In Review, Blocked, Done
 - `Gate`: C0, C1, C2, C3, Submission
-- `Workstream`: Standardization, Road-facing, DMS, Fusion, CarSky/IVI, Demo/QA
+- `Workstream`: Standardization, Road-facing/Depth, Vehicle Dynamics, DMS, Fusion, CarSky/IVI, Demo/QA
 - `Priority`: P0, P1, P2
 - `Estimate`: numeric hours
 - `Risk`: Low, Medium, High
@@ -318,13 +393,14 @@ Every issue body contains:
 - `Blocks` links.
 - Validation command or evidence.
 
-Five epics organize the execution issues:
+Six epics organize the execution issues:
 
 1. Project Standardization and Demo Skeleton.
-2. Road-facing Collision Risk.
-3. Driver Monitoring System.
-4. Risk Fusion and Coaching Policy.
-5. CarSky IVI and Final Demo.
+2. Road-facing Collision Risk, Stereo Depth, and Horizon.
+3. Vehicle Dynamics and Trip Trajectory.
+4. Driver Monitoring System.
+5. Risk Fusion and Coaching Policy.
+6. CarSky IVI and Final Demo.
 
 ## 9. Dependency Strategy
 
@@ -332,7 +408,7 @@ The critical path is:
 
 ```text
 Contract and config
-  -> normalized Road-facing and DMS outputs
+  -> normalized Road-facing, vehicle dynamics, and DMS outputs
   -> time alignment
   -> compound-risk engine
   -> safety gate and coaching policy
@@ -341,7 +417,7 @@ Contract and config
   -> end-to-end tests and demo video
 ```
 
-CarSky access, Blueprint creation, DMS model research, and Road-facing KPI sample preparation begin in parallel. A blocked research task must provide a fallback adapter or frozen output within the same gate.
+CarSky access, Blueprint creation, DMS model research, stereo-depth evaluation, trajectory rendering, and Road-facing KPI sample preparation begin in parallel. A blocked research task must provide a fallback adapter or frozen output within the same gate.
 
 ## 10. Risks and Fallbacks
 
@@ -350,6 +426,9 @@ CarSky access, Blueprint creation, DMS model research, and Road-facing KPI sampl
 | CarSky credentials or room unavailable | No working room by 2026-07-31 | Use `MockCarSkyAdapter` for pipeline validation and record the real CarSky integration separately as soon as access returns. |
 | DMS model misses C2 | No stable four-state output by 2026-08-01 | Use the best pretrained baseline plus `unknown`; do not fabricate states. |
 | Lane/ego-path remains unstable | Curved or occluded samples select wrong obstacles | Use road-plane prior, depth, temporal track continuity, and a frozen validated demo sequence. |
+| Acceleration spikes create false alerts | Filtered signal remains physically implausible or a one-frame alert fires | Apply Hampel/median filtering, plausibility limits, sustained windows, hysteresis, and cooldown. |
+| Stereo fails in rain/night or textureless regions | Coverage/confidence falls below the configured threshold | Keep invalid pixels empty and fall back per object to GT-at-5-Hz, geometry, or temporal track depth with source labels. |
+| Calibration is mistaken for dynamic IMU | Horizon remains static despite pitch/roll changes | Read per-frame rotation from telemetry; use calibration only for the static coordinate chain and intrinsics. |
 | GPU/model failure | Inference cannot complete within the gate | Use cached, versioned inference outputs and retain live replay for orchestration. |
 | Integration drift | Producers emit incompatible fields | Contract tests block merge; adapters translate legacy output into the canonical schema. |
 | Scope expansion | Nice-to-have work starts before C2 passes | Move the issue back to Backlog and protect the critical path. |
@@ -359,7 +438,7 @@ CarSky access, Blueprint creation, DMS model research, and Road-facing KPI sampl
 The design succeeds when:
 
 - C1 demonstrates the entire interface chain, with stubs clearly identified.
-- C2 demonstrates real Road-facing and DMS outputs, at least one compound event, and one CarSky coaching intervention with initial KPIs.
+- C2 demonstrates real Road-facing and DMS outputs, stereo depth with confidence, one trajectory, one vehicle-dynamics event, adjusted horizon evidence, at least one compound event, and one CarSky coaching intervention with initial KPIs.
 - C3 passes automated checks and three consecutive demo runs before the 2026-08-08 freeze.
 - Every active issue has one owner, estimate, gate, acceptance criteria, and explicit dependencies.
 - A new team member can set up, test, and replay the project using documented standard commands.
