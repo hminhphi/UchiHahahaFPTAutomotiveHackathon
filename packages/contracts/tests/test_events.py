@@ -1,13 +1,15 @@
+from collections.abc import Callable
 from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from fleetiq_contracts.events import RiskEvent
+from fleetiq_contracts.events import EvidenceReference, RiskEvent
 from fleetiq_contracts.inference import (
     BoundingBox,
     DepthState,
     Detection,
     DriverState,
+    InferenceRequest,
     InferenceResponse,
     LaneState,
 )
@@ -76,6 +78,89 @@ def test_risk_event_rejects_unknown_fields() -> None:
             explanation="TTC below 1.5 seconds",
             unsupported="nope",
         )
+
+
+def test_risk_event_requires_a_schema_version() -> None:
+    """Omitting the version would make an incoming wire payload ambiguous."""
+    with pytest.raises(ValidationError):
+        RiskEvent(
+            event_id=uuid4(),
+            correlation_id="trip-01:frame-100",
+            trip_id="T01-Sample",
+            frame_index=100,
+            producer="fusion-worker",
+            occurred_at=datetime(2026, 7, 28, tzinfo=UTC),
+            event_type="short_ttc",
+            severity=4,
+            confidence=0.91,
+            explanation="TTC below 1.5 seconds",
+        )
+
+
+@pytest.mark.parametrize(("field", "value"), [("severity", "4"), ("confidence", "0.91")])
+def test_risk_event_rejects_coerced_numeric_scalars(field: str, value: str) -> None:
+    """Coercing wire scalars would diverge from the exported JSON Schema."""
+    payload = {
+        "schema_version": "1.0",
+        "event_id": uuid4(),
+        "correlation_id": "trip-01:frame-100",
+        "trip_id": "T01-Sample",
+        "frame_index": 100,
+        "producer": "fusion-worker",
+        "occurred_at": datetime(2026, 7, 28, tzinfo=UTC),
+        "event_type": "short_ttc",
+        "severity": 4,
+        "confidence": 0.91,
+        "explanation": "TTC below 1.5 seconds",
+    }
+    payload[field] = value
+
+    with pytest.raises(ValidationError):
+        RiskEvent.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "artifact_uri",
+    ["data:image/jpeg;base64,aGVsbG8=", "base64,aGVsbG8=", "x" * 2049],
+)
+def test_artifact_references_reject_inline_or_unbounded_content(artifact_uri: str) -> None:
+    """Inline content would bypass the camera-byte boundary and MQTT size controls."""
+    with pytest.raises(ValidationError):
+        EvidenceReference(artifact_uri=artifact_uri)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda artifact_uri: EvidenceReference(artifact_uri=artifact_uri),
+        lambda artifact_uri: DepthState(
+            source="stereo",
+            median_depth_m=12.5,
+            valid_coverage=0.9,
+            confidence=0.87,
+            artifact_uri=artifact_uri,
+        ),
+        lambda artifact_uri: DriverState(
+            state="attentive", confidence=0.94, evidence_uri=artifact_uri
+        ),
+        lambda artifact_uri: InferenceRequest(
+            schema_version="1.0",
+            request_id=uuid4(),
+            correlation_id="T01-Sample:100",
+            trip_id="T01-Sample",
+            frame_index=100,
+            producer="roadface-worker",
+            occurred_at=datetime(2026, 7, 28, tzinfo=UTC),
+            model_name="roadface-v1",
+            frame_artifact_uri=artifact_uri,
+            camera_view="road_left",
+        ),
+    ],
+)
+def test_all_artifact_fields_reject_inline_data(factory: Callable[[str], object]) -> None:
+    """Every artifact-bearing field must preserve the no-inline-media guarantee."""
+    with pytest.raises(ValidationError):
+        factory("data:image/jpeg;base64,aGVsbG8=")
 
 
 def test_risk_event_rejects_naive_timestamps() -> None:

@@ -32,6 +32,17 @@ def main() -> None:
     )
     _, schema = models_json_schema(models, title="FleetIQ Protocols v1")
     schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+    schema["oneOf"] = [
+        {"$ref": f"#/$defs/{model.__name__}"}
+        for model in (
+            TelemetryEvent,
+            RiskEvent,
+            CoachingCommand,
+            CoachingAck,
+            InferenceRequest,
+            InferenceResponse,
+        )
+    ]
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
 

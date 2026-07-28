@@ -16,6 +16,8 @@ rejected.
 
 Only service-status messages may be retained. MQTT transports event metadata,
 commands, and artifact references only. It never carries camera or depth bytes.
+Artifact references must use `s3://`, `https://`, `file://`, `artifacts/`, or
+`data/`; inline `data:` and base64 content are rejected.
 
 ## Risk Event Sample
 
@@ -42,6 +44,7 @@ commands, and artifact references only. It never carries camera or depth bytes.
 }
 ```
 
-The generated [JSON Schema](schemas/events-v1.json) defines this payload and
-every other public v1 model: `EventEnvelope`, `TelemetryEvent`, `RiskEvent`,
+The generated [JSON Schema](schemas/events-v1.json) has a root `oneOf` that
+accepts the concrete payloads `TelemetryEvent`, `RiskEvent`,
 `CoachingCommand`, `CoachingAck`, `InferenceRequest`, and `InferenceResponse`.
+It also includes `EventEnvelope` as their shared definition.

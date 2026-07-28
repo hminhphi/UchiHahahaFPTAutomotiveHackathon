@@ -6,7 +6,12 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
-from .base import ContractModel, VersionedModel, validate_mqtt_segment
+from .base import (
+    ArtifactReference,
+    ContractModel,
+    VersionedModel,
+    validate_mqtt_segment,
+)
 
 
 class BoundingBox(ContractModel):
@@ -52,7 +57,7 @@ class DepthState(ContractModel):
     median_depth_m: float | None = Field(default=None, ge=0)
     valid_coverage: float = Field(ge=0, le=1)
     confidence: float = Field(ge=0, le=1)
-    artifact_uri: str | None = Field(default=None, min_length=1)
+    artifact_uri: ArtifactReference | None = None
 
 
 class DriverState(ContractModel):
@@ -62,7 +67,7 @@ class DriverState(ContractModel):
     confidence: float = Field(ge=0, le=1)
     eye_closure: float | None = Field(default=None, ge=0, le=1)
     phone_use: bool | None = None
-    evidence_uri: str | None = Field(default=None, min_length=1)
+    evidence_uri: ArtifactReference | None = None
 
 
 class InferenceRequest(VersionedModel):
@@ -75,7 +80,7 @@ class InferenceRequest(VersionedModel):
     producer: str
     occurred_at: datetime
     model_name: str
-    frame_artifact_uri: str = Field(min_length=1)
+    frame_artifact_uri: ArtifactReference
     camera_view: Literal["road_left", "road_right", "driver"]
 
     @field_validator("trip_id", "producer", "model_name")

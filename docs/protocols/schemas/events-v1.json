@@ -40,7 +40,6 @@
       "properties": {
         "schema_version": {
           "const": "1.0",
-          "default": "1.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -93,6 +92,7 @@
         }
       },
       "required": [
+        "schema_version",
         "ack_id",
         "command_id",
         "correlation_id",
@@ -109,7 +109,6 @@
       "properties": {
         "schema_version": {
           "const": "1.0",
-          "default": "1.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -175,6 +174,7 @@
         }
       },
       "required": [
+        "schema_version",
         "command_id",
         "event_id",
         "correlation_id",
@@ -232,7 +232,9 @@
         "artifact_uri": {
           "anyOf": [
             {
+              "maxLength": 2048,
               "minLength": 1,
+              "pattern": "^(?:s3://|https://|file://|artifacts/|data/).+$",
               "type": "string"
             },
             {
@@ -371,7 +373,9 @@
         "evidence_uri": {
           "anyOf": [
             {
+              "maxLength": 2048,
               "minLength": 1,
+              "pattern": "^(?:s3://|https://|file://|artifacts/|data/).+$",
               "type": "string"
             },
             {
@@ -395,7 +399,6 @@
       "properties": {
         "schema_version": {
           "const": "1.0",
-          "default": "1.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -426,6 +429,7 @@
         }
       },
       "required": [
+        "schema_version",
         "event_id",
         "correlation_id",
         "trip_id",
@@ -441,7 +445,9 @@
       "description": "An external artifact reference; MQTT never carries camera bytes.",
       "properties": {
         "artifact_uri": {
+          "maxLength": 2048,
           "minLength": 1,
+          "pattern": "^(?:s3://|https://|file://|artifacts/|data/).+$",
           "title": "Artifact Uri",
           "type": "string"
         },
@@ -484,7 +490,6 @@
       "properties": {
         "schema_version": {
           "const": "1.0",
-          "default": "1.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -520,7 +525,9 @@
           "type": "string"
         },
         "frame_artifact_uri": {
+          "maxLength": 2048,
           "minLength": 1,
+          "pattern": "^(?:s3://|https://|file://|artifacts/|data/).+$",
           "title": "Frame Artifact Uri",
           "type": "string"
         },
@@ -535,6 +542,7 @@
         }
       },
       "required": [
+        "schema_version",
         "request_id",
         "correlation_id",
         "trip_id",
@@ -554,7 +562,6 @@
       "properties": {
         "schema_version": {
           "const": "1.0",
-          "default": "1.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -628,6 +635,7 @@
         }
       },
       "required": [
+        "schema_version",
         "request_id",
         "correlation_id",
         "trip_id",
@@ -690,7 +698,6 @@
       "properties": {
         "schema_version": {
           "const": "1.0",
-          "default": "1.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -752,6 +759,7 @@
         }
       },
       "required": [
+        "schema_version",
         "event_id",
         "correlation_id",
         "trip_id",
@@ -772,7 +780,6 @@
       "properties": {
         "schema_version": {
           "const": "1.0",
-          "default": "1.0",
           "title": "Schema Version",
           "type": "string"
         },
@@ -876,6 +883,7 @@
         }
       },
       "required": [
+        "schema_version",
         "event_id",
         "correlation_id",
         "trip_id",
@@ -889,5 +897,25 @@
     }
   },
   "title": "FleetIQ Protocols v1",
-  "$schema": "https://json-schema.org/draft/2020-12/schema"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/TelemetryEvent"
+    },
+    {
+      "$ref": "#/$defs/RiskEvent"
+    },
+    {
+      "$ref": "#/$defs/CoachingCommand"
+    },
+    {
+      "$ref": "#/$defs/CoachingAck"
+    },
+    {
+      "$ref": "#/$defs/InferenceRequest"
+    },
+    {
+      "$ref": "#/$defs/InferenceResponse"
+    }
+  ]
 }

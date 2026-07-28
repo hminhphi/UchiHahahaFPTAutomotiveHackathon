@@ -6,13 +6,19 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 
-from .base import ContractModel, EventEnvelope, VersionedModel, validate_mqtt_segment
+from .base import (
+    ArtifactReference,
+    ContractModel,
+    EventEnvelope,
+    VersionedModel,
+    validate_mqtt_segment,
+)
 
 
 class EvidenceReference(ContractModel):
     """An external artifact reference; MQTT never carries camera bytes."""
 
-    artifact_uri: str = Field(min_length=1)
+    artifact_uri: ArtifactReference
     frame_index: int | None = Field(default=None, ge=0)
     description: str | None = Field(default=None, min_length=1)
 

@@ -20,6 +20,7 @@ dev = [
     "pytest-cov",
     "ruff",
     "mypy",
+    "jsonschema>=4.23",
 ]
 
 [project.optional-dependencies]

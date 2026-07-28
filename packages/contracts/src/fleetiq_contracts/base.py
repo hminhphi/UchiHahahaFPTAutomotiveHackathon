@@ -1,12 +1,21 @@
 """Shared validation primitives for FleetIQ's versioned payloads."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    StringConstraints,
+    field_validator,
+)
 
-SCHEMA_VERSION_V1: Literal["1.0"] = "1.0"
 _FORBIDDEN_MQTT_SEGMENT_CHARACTERS = frozenset("/+#")
+_ALLOWED_ARTIFACT_SCHEMES = frozenset(("file", "https", "s3"))
+_ALLOWED_LOCAL_ARTIFACT_PREFIXES = ("artifacts/", "data/")
+_ARTIFACT_REFERENCE_PATTERN = r"^(?:s3://|https://|file://|artifacts/|data/).+$"
 
 
 def validate_mqtt_segment(value: str) -> str:
@@ -18,16 +27,44 @@ def validate_mqtt_segment(value: str) -> str:
     return value
 
 
+def validate_artifact_reference(value: str) -> str:
+    """Reject inline media and require a bounded external or local artifact reference."""
+    if value.strip() != value:
+        raise ValueError("artifact references must be unpadded")
+
+    parsed = urlsplit(value)
+    if parsed.scheme:
+        if parsed.scheme not in _ALLOWED_ARTIFACT_SCHEMES:
+            raise ValueError("artifact references require an approved external or local scheme")
+        if parsed.scheme == "file" and not parsed.path:
+            raise ValueError("file artifact references require a path")
+        if parsed.scheme in {"https", "s3"} and not parsed.netloc:
+            raise ValueError("external artifact references require an authority")
+        return value
+
+    if value.startswith(_ALLOWED_LOCAL_ARTIFACT_PREFIXES):
+        return value
+
+    raise ValueError("artifact references must use s3://, https://, file://, artifacts/, or data/")
+
+
+ArtifactReference = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=2048, pattern=_ARTIFACT_REFERENCE_PATTERN),
+    AfterValidator(validate_artifact_reference),
+]
+
+
 class ContractModel(BaseModel):
     """Base model that prevents unversioned fields from crossing boundaries."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", strict=True)
 
 
 class VersionedModel(ContractModel):
     """A strict payload using the first FleetIQ wire-contract version."""
 
-    schema_version: Literal["1.0"] = SCHEMA_VERSION_V1
+    schema_version: Literal["1.0"]
 
 
 class EventEnvelope(VersionedModel):
