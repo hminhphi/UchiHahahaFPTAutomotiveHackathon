@@ -1,8 +1,8 @@
 # FleetIQ Guardian Monorepo Refactor Design
 
-**Status:** Approved for implementation  
-**Date:** 2026-07-28  
-**Decision owners:** Team UchiHahaha  
+**Status:** Approved for implementation
+**Date:** 2026-07-28
+**Decision owners:** Team UchiHahaha
 **Refactor mode:** Breaking refactor; legacy `scripts/roadface` imports and commands are not preserved
 
 ## 1. Objective
@@ -493,4 +493,3 @@ The design follows the official guidance for:
 - FastAPI container deployment.
 - AWS ECS EC2, SageMaker endpoint invocation and AWS IoT Core MQTT.
 - The organizer-provided `docs/Car-Sky-Platform.html` platform model.
-
