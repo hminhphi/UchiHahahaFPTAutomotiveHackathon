@@ -455,12 +455,12 @@ def draw_metric(
     draw_text(canvas, value, x + 170, y, color, 0.58, 1)
 
 
-def risk_color(score: float) -> tuple[int, int, int]:
+def safe_color(score: float) -> tuple[int, int, int]:
     if not math.isfinite(score):
         return MUTED
-    if score >= 70:
+    if score < 50:
         return RED
-    if score >= 35:
+    if score < 75:
         return AMBER
     return GREEN
 
@@ -471,7 +471,7 @@ def build_series(frames: list[dict[str, Any]]) -> dict[str, np.ndarray]:
 
     def get_risk(frame_idx, frame):
         if compute_trip_score:
-            history = frames[max(0, frame_idx - 10) : frame_idx]
+            history = frames[max(0, frame_idx - 30) : frame_idx]
             return compute_trip_score(frame, history_frames=history)
         return frame_value(frame, "risk", "final_risk_score")
 
@@ -728,7 +728,7 @@ class TripRenderer:
         driver = frame.get("driver", {}) if isinstance(frame.get("driver"), dict) else {}
         risk = frame.get("risk", {}) if isinstance(frame.get("risk"), dict) else {}
         
-        history = self.frames[max(0, index - 10):index]
+        history = self.frames[max(0, index - 30):index]
         score = compute_trip_score(frame, history_frames=history) if compute_trip_score else safe_float(risk.get("final_risk_score"))
         ttc = safe_float(frame.get("min_ttc"))
         metrics = (
@@ -737,7 +737,7 @@ class TripRenderer:
             ("Lat. accel", format_number(ego.get("lateral_accel"), 2, " m/s2"), TEXT),
             ("Min TTC", format_number(ttc, 2, " s"), RED if math.isfinite(ttc) and ttc < 2 else TEXT),
             ("Headway", format_number(frame.get("headway_sec"), 2, " s"), TEXT),
-            ("Risk score", format_number(score, 1, " / 100"), risk_color(score)),
+            ("Safe score", format_number(score, 1, " / 100"), safe_color(score)),
             ("Alertness", format_number(driver.get("alertness_score"), 2), TEXT),
             ("Targets", str(len(labels)), TEXT),
         )
@@ -834,10 +834,10 @@ class TripRenderer:
             (36, 1000, 1848, 48),
             self.series["risk"],
             index,
-            "RISK",
-            RED,
+            "SAFE SCORE",
+            GREEN,
             fixed_range=(0, 100),
-            threshold=70,
+            threshold=50,
         )
 
 

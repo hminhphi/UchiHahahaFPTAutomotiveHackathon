@@ -42,7 +42,7 @@ def run_sync_demo(renderer, start, end, fps, speed):
                 
                 # 2. Tính điểm rủi ro bằng AI (Cũng lấy đúng frame thứ idx)
                 frame_data = renderer.frames[idx]
-                history = renderer.frames[max(0, idx - 10):idx]
+                history = renderer.frames[max(0, idx - 30):idx]
                 score = compute_trip_score(frame_data, history_frames=history)
                 
                 # 3. Kích hoạt Back-to-Car alert
