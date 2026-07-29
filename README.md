@@ -67,27 +67,80 @@ Validate CUDA only when needed:
 uv run --package fleetiq-training-roadface python -m fleetiq_training_roadface.check_environment --probe-cuda
 ```
 
-## Quick Starts
+## Demo Quick Start
 
-Run API and web separately:
+### Dashboard in two terminals
+
+Start the API in terminal 1:
 
 ```powershell
 $env:FLEETIQ_TESTING = "true"
 uv run --package fleetiq-api uvicorn fleetiq_api.main:create_app --factory --host 0.0.0.0 --port 8000
+```
+
+Start the Next.js dashboard in terminal 2:
+
+```powershell
 pnpm --filter @fleetiq/web dev
 ```
 
-Run local service profiles:
+Open:
+
+- Fleet dashboard: <http://localhost:3000>
+- FastAPI Swagger: <http://localhost:8000/docs>
+
+The dashboard falls back to bundled fixture trips when the API has no analyzed
+trips, so the product story remains demonstrable before running perception.
+
+### Full end-to-end demo
+
+Start Docker Desktop, then bring up API, dashboard, PostgreSQL, Redis, MQTT,
+the SageMaker-compatible model mock, and the CarSky bridge:
 
 ```powershell
 Copy-Item .env.example .env
-docker compose --profile core up --build
 docker compose --profile full up --build
+```
+
+Run the six-protocol smoke test in another terminal:
+
+```powershell
 uv run --group dev python infra/compose/smoke_test.py
 ```
 
-The full smoke path requires Docker Desktop. Local models use the
-SageMaker-compatible mock; production inference remains on SageMaker.
+The expected result is `6/6`: API readiness, telemetry MQTT, mock inference,
+risk MQTT, binary camera WebSocket framing, and CarSky acknowledgement. Open
+<http://localhost:3000> for the dashboard and stop the stack without deleting
+volumes when the demo finishes:
+
+```powershell
+docker compose --profile full down
+```
+
+### Practice Dataset camera demo
+
+List available trips and launch the synchronized road/driver/stereo/depth view:
+
+```powershell
+uv run --package fleetiq-training-roadface python tools/visualization/trip_player.py --list-trips
+uv run --package fleetiq-training-roadface python tools/visualization/trip_player.py --trip T06-Sample --mode window
+```
+
+Run the lane, depth, tracking, relative-speed, and TTC pipeline on one trip:
+
+```powershell
+uv run --package fleetiq-roadface fleetiq-roadface `
+  --dataset-root data/Practice_Dataset/Practice_Dataset `
+  --trip T06-Sample `
+  --detection-source labels_custom `
+  --lane-method plane `
+  --depth-source ground_truth `
+  --visualize
+```
+
+Recommended judge flow: fleet overview, risky trip drill-down, synchronized TTC
+and driver-state timeline, camera evidence, score explanation, then a
+safety-bounded coaching acknowledgement from CarSky.
 
 ## Dataset
 
