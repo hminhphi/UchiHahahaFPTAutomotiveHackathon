@@ -339,11 +339,12 @@ def _select_frames(
         item
         for item in sorted(resolved, key=lambda item: (item[0], item[1]))
         if item[0] >= lower and (upper is None or item[0] <= upper)
-    ][:: max(1, stride)]
-    return [
+    ]
+    indexed = [
         (frame_id, processing_index, frame)
         for processing_index, (frame_id, _, frame) in enumerate(selected)
     ]
+    return indexed[:: max(1, stride)]
 
 
 def _timestamp_s(frame: dict[str, Any], processing_index: int, fps: float) -> float:

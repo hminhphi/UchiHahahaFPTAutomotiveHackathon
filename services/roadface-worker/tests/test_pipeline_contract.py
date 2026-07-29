@@ -158,3 +158,29 @@ def test_real_timestamp_takes_precedence_over_processing_fallback() -> None:
         pipeline._timestamp_s({"timestamp": 42.5}, processing_index=99, fps=10.0)
         == 42.5
     )
+
+
+def test_stride_preserves_source_frame_spacing_for_timestamp_fallback() -> None:
+    frames = [
+        {"frame_id": 0},
+        {"frame_id": 1, "timestamp": "invalid"},
+        {"frame_id": 2, "timestamp": None},
+    ]
+
+    selected = pipeline._select_frames(frames, start=0, end=None, stride=2)
+    timestamps = [
+        pipeline._timestamp_s(frame, processing_index, fps=10.0)
+        for _, processing_index, frame in selected
+    ]
+
+    assert timestamps == pytest.approx([0.0, 0.2])
+
+    tracker = ObstacleTracker(smoothing_alpha=1.0)
+    first = Detection("Car", (0.0, 0.0, 20.0, 20.0), distance_m=40.0)
+    second = Detection("Car", (2.0, 0.0, 22.0, 20.0), distance_m=38.0)
+    tracker.update([first], timestamp_s=timestamps[0])
+    tracker.update([second], timestamp_s=timestamps[1])
+
+    assert first.track_id == second.track_id
+    assert second.relative_speed_mps == pytest.approx(10.0)
+    assert second.ttc_s == pytest.approx(3.8)
