@@ -22,13 +22,15 @@ The submission targets **Challenge #3: Driver Intelligence Platform**, with safe
 ## Repository Layout
 
 ```text
-docs/                    Architecture, research notes, and workflows
-notebooks/               Dataset inventory and synchronization experiments
-scripts/
-  render_trip_dashboard.py
-  roadface/              Detection, relabeling, depth, tracking, TTC, and visualization
-tests/                   Parser and lane-tracker tests
-pyproject.toml           Python 3.12 dependencies and uv configuration
+apps/                    Web and CarSky user interfaces
+services/                Deployable inference and event workers
+packages/                Shared contracts and dataset libraries
+ml/training/roadface/    Relabeling, preparation, training, and evaluation
+ml/notebooks/            Dataset inventory and synchronization experiments
+tools/visualization/     Trip player and road-facing audit tools
+tools/dataset/           Notebook and dataset utilities
+tools/presentation/      Proposal deck generation
+tests/                   Cross-project architecture tests
 ```
 
 Datasets, model weights, generated labels, training runs, videos, and extracted artifacts are intentionally excluded from Git.
@@ -43,14 +45,14 @@ Datasets, model weights, generated labels, training runs, videos, and extracted 
 Create the environment:
 
 ```powershell
-uv sync
+uv sync --all-packages
 ```
 
 Install the CUDA and road-facing perception extras:
 
 ```powershell
-uv sync --extra cu130 --extra roadface
-uv run --extra cu130 --extra roadface python scripts\roadface\check_roadface_env.py --probe-cuda
+uv sync --all-packages --extra cu130 --extra models
+uv run --package fleetiq-training-roadface python -m fleetiq_training_roadface.check_environment --probe-cuda
 ```
 
 ## Expected Dataset Layout
@@ -81,14 +83,14 @@ data/
 List trips and open the synchronized driving view:
 
 ```powershell
-uv run python scripts\render_trip_dashboard.py --list-trips
-uv run python scripts\render_trip_dashboard.py --trip T01-Sample --mode window
+uv run --package fleetiq-training-roadface python tools\visualization\trip_player.py --list-trips
+uv run --package fleetiq-training-roadface python tools\visualization\trip_player.py --trip T01-Sample --mode window
 ```
 
 Render one frame:
 
 ```powershell
-uv run python scripts\render_trip_dashboard.py --trip T06-Sample --mode frame --frame 100
+uv run --package fleetiq-training-roadface python tools\visualization\trip_player.py --trip T06-Sample --mode frame --frame 100
 ```
 
 ## LocateAnything Relabeling
@@ -96,19 +98,19 @@ uv run python scripts\render_trip_dashboard.py --trip T06-Sample --mode frame --
 Relabel the Practice Dataset into each trip's `kitti/label2_custom` directory:
 
 ```powershell
-uv run --extra cu130 --extra roadface python scripts\roadface\relabel_locateanything.py --dataset practice --generation-mode slow --continue-on-error
+uv run --package fleetiq-training-roadface --extra models fleetiq-label-roadface --dataset practice --generation-mode slow --continue-on-error
 ```
 
 Check progress:
 
 ```powershell
-uv run --extra cu130 --extra roadface python scripts\roadface\check_locateanything_progress.py --dataset practice
+uv run --package fleetiq-training-roadface python tools\visualization\roadface\check_locateanything_progress.py --dataset practice
 ```
 
 Visualize custom bounding boxes:
 
 ```powershell
-uv run --extra cu130 --extra roadface python scripts\roadface\visualize_kitti_labels.py --dataset practice --trip T06-Sample --label-dir-name label2_custom --start 0 --end 599 --stride 120 --max-frames 5 --mode contact-sheet
+uv run --package fleetiq-training-roadface python tools\visualization\roadface\visualize_kitti_labels.py --dataset practice --trip T06-Sample --label-dir-name label2_custom --start 0 --end 599 --stride 120 --max-frames 5 --mode contact-sheet
 ```
 
 The original `label_2` directory is never overwritten. LocateAnything raw responses are stored beside generated labels for auditing.
@@ -118,7 +120,7 @@ The original `label_2` directory is never overwritten. LocateAnything raw respon
 Run detection, depth, lane filtering, tracking, relative-speed estimation, and TTC:
 
 ```powershell
-uv run --extra cu130 --extra roadface python scripts\roadface\run_roadface_pipeline.py --dataset practice --trip T06-Sample --detector labels_custom --lane-method plane --depth-source gt --visualize video
+uv run --package fleetiq-roadface fleetiq-roadface --dataset-root data\Practice_Dataset\Practice_Dataset --trip T06-Sample --detection-source labels_custom --lane-method plane --depth-source ground_truth --visualize
 ```
 
 Generated CSV, JSONL, frames, and videos are written under `artifacts/` and remain outside Git.
@@ -126,7 +128,7 @@ Generated CSV, JSONL, frames, and videos are written under `artifacts/` and rema
 ## Tests
 
 ```powershell
-uv run --extra cu130 --extra roadface python -m unittest discover -s tests -v
+uv run pytest
 ```
 
 ## Documentation

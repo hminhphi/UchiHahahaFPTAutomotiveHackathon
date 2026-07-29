@@ -14,6 +14,7 @@ members = [
     "fleetiq-contracts",
     "fleetiq-data-kit",
     "fleetiq-roadface",
+    "fleetiq-training-roadface",
 ]
 
 [[package]]
@@ -505,6 +506,48 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.0" },
     { name = "opencv-python-headless", specifier = ">=4.10" },
 ]
+
+[[package]]
+name = "fleetiq-training-roadface"
+version = "0.1.0"
+source = { editable = "ml/training/roadface" }
+dependencies = [
+    { name = "fleetiq-data-kit" },
+    { name = "fleetiq-roadface" },
+    { name = "numpy" },
+    { name = "opencv-python-headless" },
+    { name = "pillow" },
+]
+
+[package.optional-dependencies]
+models = [
+    { name = "accelerate" },
+    { name = "diffusers" },
+    { name = "peft" },
+    { name = "safetensors" },
+    { name = "scipy" },
+    { name = "timm" },
+    { name = "transformers" },
+    { name = "ultralytics" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "accelerate", marker = "extra == 'models'", specifier = ">=1.0" },
+    { name = "diffusers", marker = "extra == 'models'", specifier = ">=0.32" },
+    { name = "fleetiq-data-kit", editable = "packages/data-kit" },
+    { name = "fleetiq-roadface", editable = "services/roadface-worker" },
+    { name = "numpy", specifier = ">=2.0" },
+    { name = "opencv-python-headless", specifier = ">=4.10" },
+    { name = "peft", marker = "extra == 'models'", specifier = ">=0.12" },
+    { name = "pillow", specifier = ">=12.0" },
+    { name = "safetensors", marker = "extra == 'models'", specifier = ">=0.4" },
+    { name = "scipy", marker = "extra == 'models'", specifier = ">=1.14" },
+    { name = "timm", marker = "extra == 'models'", specifier = ">=1.0.11" },
+    { name = "transformers", marker = "extra == 'models'", specifier = "==4.57.1" },
+    { name = "ultralytics", marker = "extra == 'models'", specifier = ">=8.3" },
+]
+provides-extras = ["models"]
 
 [[package]]
 name = "fonttools"

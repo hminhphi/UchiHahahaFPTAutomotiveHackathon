@@ -73,3 +73,12 @@ exclude = [
     "infra/compose",
     "infra/docker",
 ]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "packages/contracts/tests",
+    "packages/data-kit/tests",
+    "services/roadface-worker/tests",
+    "ml/training/roadface/tests",
+]
