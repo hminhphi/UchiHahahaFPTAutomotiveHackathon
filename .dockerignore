@@ -1,0 +1,10 @@
+.git
+.venv
+.env
+data/
+notebooks/
+docs/
+__pycache__/
+*.pdf
+*.pptx
+*.mp4
