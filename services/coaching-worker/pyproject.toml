@@ -1,0 +1,24 @@
+[project]
+name = "fleetiq-coaching-worker"
+version = "0.1.0"
+description = "FleetIQ safe coaching policy and CarSky delivery worker."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fleetiq-contracts",
+    "httpx>=0.28,<1",
+    "pydantic>=2.11,<3",
+]
+
+[project.scripts]
+fleetiq-coaching-worker = "fleetiq_coaching.main:main"
+
+[tool.uv.sources]
+fleetiq-contracts = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fleetiq_coaching"]

@@ -12,10 +12,12 @@ resolution-markers = [
 members = [
     "automotivehacathon",
     "fleetiq-api",
+    "fleetiq-coaching-worker",
     "fleetiq-contracts",
     "fleetiq-data-kit",
     "fleetiq-dms-worker",
     "fleetiq-event-gateway",
+    "fleetiq-fusion-worker",
     "fleetiq-model-clients",
     "fleetiq-observability",
     "fleetiq-roadface",
@@ -567,6 +569,23 @@ requires-dist = [
 dev = [{ name = "httpx2", specifier = ">=2,<3" }]
 
 [[package]]
+name = "fleetiq-coaching-worker"
+version = "0.1.0"
+source = { editable = "services/coaching-worker" }
+dependencies = [
+    { name = "fleetiq-contracts" },
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fleetiq-contracts", editable = "packages/contracts" },
+    { name = "httpx", specifier = ">=0.28,<1" },
+    { name = "pydantic", specifier = ">=2.11,<3" },
+]
+
+[[package]]
 name = "fleetiq-contracts"
 version = "0.1.0"
 source = { editable = "packages/contracts" }
@@ -621,6 +640,17 @@ requires-dist = [
     { name = "paho-mqtt", specifier = ">=2.1,<3" },
     { name = "pydantic", specifier = ">=2.11,<3" },
 ]
+
+[[package]]
+name = "fleetiq-fusion-worker"
+version = "0.1.0"
+source = { editable = "services/fusion-worker" }
+dependencies = [
+    { name = "fleetiq-contracts" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "fleetiq-contracts", editable = "packages/contracts" }]
 
 [[package]]
 name = "fleetiq-model-clients"
