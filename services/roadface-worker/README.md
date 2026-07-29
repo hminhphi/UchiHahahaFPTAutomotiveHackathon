@@ -35,3 +35,9 @@ uv run ruff check services/roadface-worker
 The `headless` extra is required for worker/model environments and installs
 `opencv-python-headless` without GUI libraries. Keep it separate from the
 training/tools environment, which intentionally installs `opencv-python`.
+
+The default package remains importable without either OpenCV distribution so
+contracts and public data types can be inspected in dependency-light
+environments. `RoadfacePipeline` and `PipelineOptions` are loaded lazily; using
+them without an OpenCV runtime raises an install instruction instead of
+breaking `import fleetiq_roadface` or CLI `--help`.

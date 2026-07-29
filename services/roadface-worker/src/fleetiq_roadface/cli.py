@@ -8,8 +8,6 @@ from pathlib import Path
 
 from fleetiq_data import DatasetPaths, discover_trips
 
-from .pipeline import PipelineOptions, RoadfacePipeline
-
 DEFAULT_DATASET_ROOTS = {
     "practice": Path("data/Practice_Dataset/Practice_Dataset"),
     "redacted": Path("data/Hackathon_Dataset_Redacted/Hackathon_Dataset_Redacted"),
@@ -91,6 +89,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not selected:
         choices = ", ".join(trip.trip_id for trip in available)
         print(f"No trips selected. Available: {choices}")
+        return 2
+    try:
+        from . import PipelineOptions, RoadfacePipeline
+    except RuntimeError as exc:
+        print(str(exc))
         return 2
     pipeline = RoadfacePipeline(
         dataset_paths=paths,

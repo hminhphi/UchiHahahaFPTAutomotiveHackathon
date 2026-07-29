@@ -9,7 +9,17 @@ from pathlib import Path
 from typing import Any, Literal, Protocol
 from uuid import NAMESPACE_URL, uuid5
 
-import cv2
+try:
+    import cv2
+except ModuleNotFoundError as exc:
+    if exc.name != "cv2":
+        raise
+    raise RuntimeError(
+        "Road-facing pipeline behavior requires OpenCV. Install "
+        "'fleetiq-roadface[headless]' for worker/server use, or install "
+        "'opencv-python' through fleetiq-training-roadface for GUI tools."
+    ) from exc
+
 import numpy as np
 from fleetiq_data import (
     Calibration,
