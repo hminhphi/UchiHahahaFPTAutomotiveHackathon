@@ -10,7 +10,7 @@ COPY packages/contracts packages/contracts
 COPY packages/data-kit packages/data-kit
 COPY services/roadface-worker services/roadface-worker
 
-RUN uv sync --frozen --no-dev --package fleetiq-roadface --no-editable
+RUN uv sync --frozen --no-dev --package fleetiq-roadface --extra headless --no-editable
 
 FROM python:3.12-slim-bookworm AS runtime
 

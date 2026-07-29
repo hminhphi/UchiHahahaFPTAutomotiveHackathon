@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 
 from fleetiq_training_roadface.experimental import (
-    PRACTICE_ROOT,
     bbox_from_projected_object,
     discover_trips,
     find_image,
@@ -27,7 +26,11 @@ def parse_args() -> argparse.Namespace:
         description="Evaluate road-facing object distance/TTC outputs on full-GT practice trips."
     )
     parser.add_argument("--pred-dir", type=Path, default=Path("artifacts/roadface/predictions"))
-    parser.add_argument("--dataset-root", type=Path, default=PRACTICE_ROOT)
+    parser.add_argument(
+        "--dataset-root",
+        type=Path,
+        help="Explicit trip root; otherwise use FLEETIQ_DATA_ROOT or Practice data.",
+    )
     parser.add_argument("--trip", action="append")
     parser.add_argument("--iou-threshold", type=float, default=0.5)
     parser.add_argument("--output", type=Path, default=Path("artifacts/roadface/evaluation_summary.json"))
@@ -137,7 +140,8 @@ def main() -> None:
     args = parse_args()
     requested = set(args.trip or [])
     summaries = []
-    for trip_dir in discover_trips(str(args.dataset_root)):
+    dataset = args.dataset_root if args.dataset_root is not None else "practice"
+    for trip_dir in discover_trips(dataset):
         if requested and trip_dir.name not in requested:
             continue
         pred_path = args.pred_dir / f"{trip_dir.name}_roadface.csv"

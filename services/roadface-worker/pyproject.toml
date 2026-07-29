@@ -8,6 +8,10 @@ dependencies = [
     "fleetiq-contracts",
     "fleetiq-data-kit",
     "numpy>=2.0",
+]
+
+[project.optional-dependencies]
+headless = [
     "opencv-python-headless>=4.10",
 ]
 

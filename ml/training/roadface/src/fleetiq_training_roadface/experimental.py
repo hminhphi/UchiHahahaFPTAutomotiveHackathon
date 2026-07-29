@@ -7,21 +7,13 @@ from typing import Any, Iterable
 
 import cv2
 import numpy as np
-from fleetiq_data import DatasetPaths
-from fleetiq_data import discover_trips as discover_trip_records
 from fleetiq_data import load_trip_document
-from fleetiq_data import resolve_trip as resolve_trip_record
 from fleetiq_roadface.geometry import valid_bbox as runtime_valid_bbox
-
-
-PROJECT_ROOT = Path.cwd()
-PRACTICE_ROOT = PROJECT_ROOT / "data" / "Practice_Dataset" / "Practice_Dataset"
-REDACTED_ROOT = (
-    PROJECT_ROOT
-    / "data"
-    / "Hackathon_Dataset_Redacted"
-    / "Hackathon_Dataset_Redacted"
+from fleetiq_training_roadface.datasets import (
+    discover_trip_dirs,
+    resolve_trip_dir,
 )
+
 
 CLASS_NAMES = [
     "Car",
@@ -117,31 +109,12 @@ class PlaneLaneEstimate:
     note: str = ""
 
 
-def discover_trips(dataset: str = "all") -> list[Path]:
-    roots: list[Path]
-    if dataset == "practice":
-        roots = [PRACTICE_ROOT]
-    elif dataset == "redacted":
-        roots = [REDACTED_ROOT]
-    elif dataset == "all":
-        roots = [PRACTICE_ROOT, REDACTED_ROOT]
-    else:
-        root = Path(dataset)
-        roots = [root]
-    trips: list[Path] = []
-    for root in roots:
-        trips.extend(record.trip_dir for record in discover_trip_records(DatasetPaths(root)))
-    return trips
+def discover_trips(dataset: str | Path = "all") -> list[Path]:
+    return discover_trip_dirs(dataset)
 
 
-def resolve_trip(name: str, dataset: str = "all") -> Path:
-    roots = list(dict.fromkeys(trip.parent for trip in discover_trips(dataset)))
-    for root in roots:
-        try:
-            return resolve_trip_record(DatasetPaths(root), name).trip_dir
-        except FileNotFoundError:
-            continue
-    raise FileNotFoundError(f"Trip not found: {name}")
+def resolve_trip(name: str, dataset: str | Path = "all") -> Path:
+    return resolve_trip_dir(name, dataset)
 
 
 def load_trip_doc(trip_dir: Path) -> dict[str, Any]:

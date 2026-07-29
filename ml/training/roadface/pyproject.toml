@@ -7,8 +7,9 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "fleetiq-data-kit",
     "fleetiq-roadface",
+    "imageio>=2.36",
     "numpy>=2.0",
-    "opencv-python-headless>=4.10",
+    "opencv-python>=4.10",
     "pillow>=12.0",
 ]
 

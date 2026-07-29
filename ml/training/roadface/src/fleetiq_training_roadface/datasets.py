@@ -8,25 +8,43 @@ from fleetiq_data import DatasetPaths, discover_trips as discover_trip_records
 from fleetiq_data import resolve_trip as resolve_trip_record
 
 
-PRACTICE_ROOT = Path("data") / "Practice_Dataset" / "Practice_Dataset"
+PROJECT_ROOT = Path(__file__).resolve().parents[5]
+PRACTICE_ROOT = (
+    PROJECT_ROOT / "data" / "Practice_Dataset" / "Practice_Dataset"
+).resolve()
 REDACTED_ROOT = (
-    Path("data")
+    PROJECT_ROOT
+    / "data"
     / "Hackathon_Dataset_Redacted"
     / "Hackathon_Dataset_Redacted"
-)
+).resolve()
+
+
+def environment_dataset_root() -> Path | None:
+    """Return the configured organizer root without consulting the cwd."""
+    try:
+        return DatasetPaths.from_env().root.resolve()
+    except ValueError:
+        return None
 
 
 def dataset_roots(dataset: str | Path = "all") -> tuple[Path, ...]:
     """Map a named organizer dataset or explicit root to concrete roots."""
     if isinstance(dataset, Path):
-        return (dataset,)
+        return (dataset.expanduser().resolve(),)
+    if dataset not in {"practice", "redacted", "all"}:
+        return (Path(dataset).expanduser().resolve(),)
+
+    configured_root = environment_dataset_root()
+    if configured_root is not None:
+        return (configured_root,)
     if dataset == "practice":
         return (PRACTICE_ROOT,)
     if dataset == "redacted":
         return (REDACTED_ROOT,)
     if dataset == "all":
         return (PRACTICE_ROOT, REDACTED_ROOT)
-    return (Path(dataset),)
+    raise AssertionError(f"Unhandled dataset selector: {dataset}")
 
 
 def discover_trip_dirs(dataset: str | Path = "all") -> list[Path]:

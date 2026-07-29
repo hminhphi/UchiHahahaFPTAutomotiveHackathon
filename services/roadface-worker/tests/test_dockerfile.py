@@ -8,7 +8,8 @@ def test_runtime_uses_non_editable_path_stable_environment() -> None:
 
     assert "UV_PROJECT_ENVIRONMENT=/opt/venv" in dockerfile
     assert (
-        "uv sync --frozen --no-dev --package fleetiq-roadface --no-editable"
+        "uv sync --frozen --no-dev --package fleetiq-roadface "
+        "--extra headless --no-editable"
         in dockerfile
     )
     assert "COPY --from=builder /opt/venv /opt/venv" in dockerfile

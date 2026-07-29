@@ -11,7 +11,7 @@ packaged with the service.
 Run one Practice frame from the repository root:
 
 ```powershell
-uv run --package fleetiq-roadface fleetiq-roadface `
+uv run --package fleetiq-roadface --extra headless fleetiq-roadface `
   --dataset practice --trip T01-Sample --start 0 --end 0 --depth-source gt
 ```
 
@@ -28,6 +28,10 @@ latest depth sample at or before each frame.
 Validate the package:
 
 ```powershell
-uv run --package fleetiq-roadface pytest services/roadface-worker/tests -v
+uv run --package fleetiq-roadface --extra headless pytest services/roadface-worker/tests -v
 uv run ruff check services/roadface-worker
 ```
+
+The `headless` extra is required for worker/model environments and installs
+`opencv-python-headless` without GUI libraries. Keep it separate from the
+training/tools environment, which intentionally installs `opencv-python`.

@@ -12,7 +12,6 @@ from fleetiq_training_roadface.experimental import (
     CLASS_NAMES,
     CLASS_TO_ID,
     Detection,
-    PRACTICE_ROOT,
     build_lane_corridor_masks,
     bbox_from_projected_object,
     compute_road_and_lane,
@@ -34,7 +33,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Export projected KITTI 3D boxes as a YOLO road-facing dataset."
     )
-    parser.add_argument("--dataset-root", type=Path, default=PRACTICE_ROOT)
+    parser.add_argument(
+        "--dataset-root",
+        type=Path,
+        help="Explicit trip root; otherwise use FLEETIQ_DATA_ROOT or Practice data.",
+    )
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -159,7 +162,8 @@ def main() -> None:
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     totals: dict[str, dict[str, int]] = {}
-    for trip_dir in discover_trips(str(args.dataset_root)):
+    dataset = args.dataset_root if args.dataset_root is not None else "practice"
+    for trip_dir in discover_trips(dataset):
         if not trip_dir.name.endswith("-Sample"):
             continue
         totals[trip_dir.name] = export_trip(
