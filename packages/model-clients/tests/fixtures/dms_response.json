@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "request_id": "22222222-2222-4222-8222-222222222222",
+  "correlation_id": "fixture-dms",
+  "trip_id": "T01-Sample",
+  "frame_index": 0,
+  "producer": "dms-model",
+  "occurred_at": "2026-07-29T00:00:00+00:00",
+  "detections": [],
+  "lane_state": null,
+  "depth_state": null,
+  "driver_state": {
+    "state": "attentive",
+    "confidence": 0.94,
+    "eye_closure": 0.08,
+    "phone_use": false,
+    "evidence_uri": "artifacts/predictions/dms/T01-Sample/000000.jpg"
+  }
+}

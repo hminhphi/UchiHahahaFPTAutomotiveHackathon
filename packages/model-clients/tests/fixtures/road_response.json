@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "request_id": "11111111-1111-4111-8111-111111111111",
+  "correlation_id": "fixture-road",
+  "trip_id": "T01-Sample",
+  "frame_index": 0,
+  "producer": "roadface-model",
+  "occurred_at": "2026-07-29T00:00:00+00:00",
+  "detections": [
+    {
+      "track_id": "vehicle-1",
+      "label": "car",
+      "bounding_box": {
+        "x_min": 100.0,
+        "y_min": 80.0,
+        "x_max": 220.0,
+        "y_max": 210.0
+      },
+      "confidence": 0.95,
+      "distance_m": 18.5,
+      "relative_speed_mps": -2.0,
+      "ttc_s": 9.25
+    }
+  ],
+  "lane_state": {
+    "detected": true,
+    "lane_offset_m": 0.08,
+    "heading_error_deg": -0.4,
+    "confidence": 0.92
+  },
+  "depth_state": {
+    "source": "stereo",
+    "median_depth_m": 18.5,
+    "valid_coverage": 0.88,
+    "confidence": 0.9,
+    "artifact_uri": "artifacts/predictions/depth/T01-Sample/000000.png"
+  },
+  "driver_state": null
+}
