@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1.0",
+  "name": "fleetiq-guardian-carsky",
+  "description": "FleetIQ in-room coaching bridge and Android Automotive HMI",
+  "artifacts": {
+    "androidImage": "<CARSKY_ANDROID_AUTOMOTIVE_ARTIFACT_ID>",
+    "vssSchema": "<FLEETIQ_VSS_ARTIFACT_ID>",
+    "bridgeImage": "<ZOT_HOST>/fleetiq/carsky-coaching-bridge:0.1.0"
+  },
+  "nodes": [
+    {
+      "key": "coaching-bridge",
+      "type": "CONTAINER",
+      "config": {
+        "image": "<ZOT_HOST>/fleetiq/carsky-coaching-bridge:0.1.0",
+        "command": ["python", "/app/bridge.py"],
+        "exposedPorts": [
+          {"name": "health", "port": 8090, "protocol": "http"}
+        ]
+      },
+      "pins": [
+        {"key": "ethernet", "type": "ETHERNET", "direction": "BIDIRECTIONAL"},
+        {"key": "coaching-vss", "type": "KUKSA", "direction": "OUTPUT"}
+      ]
+    },
+    {
+      "key": "vehicle-signals",
+      "type": "KUKSA_BROKER",
+      "config": {"vssArtifact": "<FLEETIQ_VSS_ARTIFACT_ID>"},
+      "pins": [
+        {"key": "vss", "type": "KUKSA", "direction": "BIDIRECTIONAL"},
+        {"key": "ethernet", "type": "ETHERNET", "direction": "BIDIRECTIONAL"}
+      ]
+    },
+    {
+      "key": "fleetiq-aaos",
+      "type": "SKYCRAFT",
+      "config": {
+        "imageArtifact": "<CARSKY_ANDROID_AUTOMOTIVE_ARTIFACT_ID>",
+        "apkArtifact": "<FLEETIQ_HMI_APK_ARTIFACT_ID>"
+      },
+      "pins": [
+        {"key": "ethernet", "type": "ETHERNET", "direction": "BIDIRECTIONAL"},
+        {"key": "vhal", "type": "VHAL", "direction": "INPUT"},
+        {"key": "vss", "type": "KUKSA", "direction": "INPUT"},
+        {"key": "screen", "type": "SCREEN", "direction": "OUTPUT"}
+      ]
+    },
+    {
+      "key": "room-l2",
+      "type": "ETHERNET_BRIDGE",
+      "pins": [
+        {"key": "bridge", "type": "ETHERNET", "direction": "BIDIRECTIONAL"}
+      ]
+    }
+  ],
+  "edges": [
+    {"from": "coaching-bridge.ethernet", "to": "room-l2.bridge"},
+    {"from": "vehicle-signals.ethernet", "to": "room-l2.bridge"},
+    {"from": "fleetiq-aaos.ethernet", "to": "room-l2.bridge"},
+    {"from": "coaching-bridge.coaching-vss", "to": "vehicle-signals.vss"},
+    {"from": "vehicle-signals.vss", "to": "fleetiq-aaos.vss"}
+  ],
+  "signals": [
+    {
+      "path": "Vehicle.Cabin.Infotainment.HMI.CurrentCommand",
+      "source": "coaching-bridge.coaching-vss",
+      "fallbackTransport": "http://coaching-bridge:8090/v1/coaching/current"
+    }
+  ],
+  "widgets": [
+    {
+      "key": "fleetiq-screen",
+      "type": "SCREEN",
+      "source": "fleetiq-aaos.screen"
+    }
+  ]
+}
