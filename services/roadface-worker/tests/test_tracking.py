@@ -59,3 +59,18 @@ def test_plausible_same_class_motion_keeps_track_and_ttc() -> None:
     assert first.track_id == second.track_id == third.track_id
     assert third.relative_speed_mps == 5.0
     assert third.ttc_s == 6.0
+
+
+def test_missing_distance_clears_motion_before_next_valid_measurement() -> None:
+    tracker = ObstacleTracker(smoothing_alpha=1.0)
+    first = Detection("Car", (0.0, 0.0, 20.0, 20.0), distance_m=40.0)
+    missing = Detection("Car", (1.0, 0.0, 21.0, 20.0), distance_m=None)
+    resumed = Detection("Car", (2.0, 0.0, 22.0, 20.0), distance_m=30.0)
+
+    tracker.update([first], timestamp_s=0.0)
+    tracker.update([missing], timestamp_s=1.0)
+    tracker.update([resumed], timestamp_s=2.0)
+
+    assert first.track_id == missing.track_id == resumed.track_id
+    assert resumed.relative_speed_mps is None
+    assert resumed.ttc_s is None

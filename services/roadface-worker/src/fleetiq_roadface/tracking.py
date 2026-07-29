@@ -172,6 +172,11 @@ class ObstacleTracker:
         timestamp_s: float,
     ) -> None:
         detection.track_id = track_id
+        previous = self.tracks.get(track_id)
+        if previous is not None and (
+            previous.distance_m is None or detection.distance_m is None
+        ):
+            self.motion.discard(track_id)
         if detection.distance_m is not None:
             motion = self.motion.update(
                 track_id=track_id,

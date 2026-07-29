@@ -104,7 +104,7 @@ class RoadfacePipeline:
         written: list[Path] = []
         processed = 0
         self._trackers[trip.trip_id] = ObstacleTracker()
-        for _, list_index, frame in _select_frames(
+        for frame_index, processing_index, frame in _select_frames(
             raw_frames,
             start=start,
             end=end,
@@ -115,7 +115,8 @@ class RoadfacePipeline:
             result = self.process_frame(
                 trip,
                 frame=frame,
-                list_index=list_index,
+                frame_index=frame_index,
+                processing_index=processing_index,
                 fps=fps,
                 options=options,
             )
@@ -133,11 +134,11 @@ class RoadfacePipeline:
         trip: TripRecord,
         *,
         frame: dict[str, Any],
-        list_index: int,
+        frame_index: int,
+        processing_index: int,
         fps: float,
         options: PipelineOptions,
     ) -> RoadFrameResult | None:
-        frame_index = _frame_index(frame, list_index)
         left_path = find_frame(trip.image_2_dir, frame_index)
         if left_path is None:
             return None
@@ -172,7 +173,7 @@ class RoadfacePipeline:
                 lane.vertical_corridor_mask,
                 lateral_margin_m=options.lane_margin_m,
             )
-        timestamp_s = _timestamp_s(frame, list_index, fps)
+        timestamp_s = _timestamp_s(frame, processing_index, fps)
         tracker = self._trackers.setdefault(trip.trip_id, ObstacleTracker())
         detections = tracker.update(detections, timestamp_s)
         occurred_at = datetime(1970, 1, 1, tzinfo=UTC) + timedelta(
@@ -338,14 +339,21 @@ def _select_frames(
         item
         for item in sorted(resolved, key=lambda item: (item[0], item[1]))
         if item[0] >= lower and (upper is None or item[0] <= upper)
+    ][:: max(1, stride)]
+    return [
+        (frame_id, processing_index, frame)
+        for processing_index, (frame_id, _, frame) in enumerate(selected)
     ]
-    return selected[:: max(1, stride)]
 
 
-def _timestamp_s(frame: dict[str, Any], list_index: int, fps: float) -> float:
+def _timestamp_s(frame: dict[str, Any], processing_index: int, fps: float) -> float:
     value = frame.get("timestamp")
     try:
         timestamp = float(value)
     except (TypeError, ValueError):
-        timestamp = list_index / max(fps, 1e-6)
-    return timestamp if np.isfinite(timestamp) else list_index / max(fps, 1e-6)
+        timestamp = processing_index / max(fps, 1e-6)
+    return (
+        timestamp
+        if np.isfinite(timestamp)
+        else processing_index / max(fps, 1e-6)
+    )
