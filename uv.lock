@@ -14,10 +14,12 @@ members = [
     "fleetiq-api",
     "fleetiq-contracts",
     "fleetiq-data-kit",
+    "fleetiq-dms-worker",
     "fleetiq-event-gateway",
     "fleetiq-model-clients",
     "fleetiq-observability",
     "fleetiq-roadface",
+    "fleetiq-training-dms",
     "fleetiq-training-roadface",
 ]
 
@@ -587,6 +589,23 @@ dependencies = [
 requires-dist = [{ name = "numpy", specifier = ">=2.0" }]
 
 [[package]]
+name = "fleetiq-dms-worker"
+version = "0.1.0"
+source = { editable = "services/dms-worker" }
+dependencies = [
+    { name = "fleetiq-contracts" },
+    { name = "fleetiq-model-clients", extra = ["aws"] },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fleetiq-contracts", editable = "packages/contracts" },
+    { name = "fleetiq-model-clients", extras = ["aws"], editable = "packages/model-clients" },
+    { name = "pydantic", specifier = ">=2.11,<3" },
+]
+
+[[package]]
 name = "fleetiq-event-gateway"
 version = "0.1.0"
 source = { editable = "services/event-gateway" }
@@ -651,6 +670,17 @@ requires-dist = [
     { name = "opencv-python-headless", marker = "extra == 'headless'", specifier = ">=4.10" },
 ]
 provides-extras = ["headless"]
+
+[[package]]
+name = "fleetiq-training-dms"
+version = "0.1.0"
+source = { editable = "ml/training/dms" }
+dependencies = [
+    { name = "fleetiq-contracts" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "fleetiq-contracts", editable = "packages/contracts" }]
 
 [[package]]
 name = "fleetiq-training-roadface"

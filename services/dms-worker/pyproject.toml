@@ -1,0 +1,25 @@
+[project]
+name = "fleetiq-dms-worker"
+version = "0.1.0"
+description = "FleetIQ driver monitoring runtime worker."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fleetiq-contracts",
+    "fleetiq-model-clients[aws]",
+    "pydantic>=2.11,<3",
+]
+
+[project.scripts]
+fleetiq-dms-worker = "fleetiq_dms.main:main"
+
+[tool.uv.sources]
+fleetiq-contracts = { workspace = true }
+fleetiq-model-clients = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fleetiq_dms"]
