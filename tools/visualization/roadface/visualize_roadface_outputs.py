@@ -63,7 +63,11 @@ def detections_from_rows(rows: list[dict[str, str]]) -> list[Detection]:
 def main() -> None:
     args = parse_args()
     trip_dir = resolve_trip(args.trip, args.dataset)
-    pred_csv = args.pred_csv or Path("artifacts/roadface/predictions") / f"{trip_dir.name}_roadface.csv"
+    pred_csv = (
+        args.pred_csv
+        or Path("artifacts/predictions/roadface")
+        / f"{trip_dir.name}_roadface.csv"
+    )
     grouped = load_rows(pred_csv)
     frame_ids = sorted(grouped)
     if not frame_ids:
@@ -71,7 +75,11 @@ def main() -> None:
     start = max(args.start, frame_ids[0])
     end = args.end if args.end is not None else frame_ids[-1]
     writer = None
-    output = args.output or Path("artifacts/roadface/predictions") / f"{trip_dir.name}_overlay.mp4"
+    output = (
+        args.output
+        or Path("artifacts/renders/roadface")
+        / f"{trip_dir.name}_overlay.mp4"
+    )
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     try:

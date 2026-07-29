@@ -29,7 +29,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--frame", type=int, default=300)
     parser.add_argument("--lane-width-m", type=float, default=3.7)
     parser.add_argument("--lookahead-m", type=float, default=10.0)
-    parser.add_argument("--output", type=Path, default=Path("artifacts/roadface/lane_evidence_debug.png"))
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/renders/roadface/lane_evidence_debug.png"),
+    )
     return parser.parse_args()
 
 

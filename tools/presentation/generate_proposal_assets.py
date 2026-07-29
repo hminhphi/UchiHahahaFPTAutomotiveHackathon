@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = Path(__file__).resolve().parents[2]
-ASSET_DIR = ROOT / "artifacts" / "pptx-assets"
+ASSET_DIR = ROOT / "artifacts" / "presentations" / "assets"
 
 NAVY = "#19226D"
 ORANGE = "#F37021"

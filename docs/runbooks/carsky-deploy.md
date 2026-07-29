@@ -1,6 +1,7 @@
 # CarSky Deployment Runbook
 
-This runbook follows the organizer's `Car-Sky-Platform.html` lifecycle:
+This runbook follows the organizer's
+[`Car-Sky-Platform.html`](../reference/carsky/Car-Sky-Platform.html) lifecycle:
 Blueprint -> Deploy -> Room -> Device -> Widget.
 
 ## 1. Build and push artifacts

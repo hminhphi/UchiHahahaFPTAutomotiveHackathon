@@ -61,7 +61,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("artifacts/roadface/manual_lane_masks"),
+        default=Path("artifacts/training/roadface/manual_lane_masks"),
         help="Creates <trip>/lane_masks, <trip>/road_masks, and <trip>/metadata.",
     )
     return parser.parse_args()

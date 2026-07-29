@@ -96,12 +96,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("artifacts/roadface/ai_lane_masks"),
+        default=Path("artifacts/training/roadface/ai_lane_masks"),
     )
     parser.add_argument(
         "--cache-dir",
         type=Path,
-        default=Path("artifacts/model_cache"),
+        default=Path("artifacts/models/cache"),
         help="Local cache for Hugging Face and torch.hub downloads.",
     )
     parser.add_argument("--conf-threshold", type=float, default=0.45)

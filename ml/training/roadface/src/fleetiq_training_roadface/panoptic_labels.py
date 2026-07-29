@@ -91,11 +91,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--label-dir-name", default=OUTPUT_LABEL_DIR)
     parser.add_argument("--overwrite", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--device", default="auto", help="'auto', 'cpu', 'cuda', or a CUDA device like 'cuda:0'.")
-    parser.add_argument("--cache-dir", type=Path, default=Path("artifacts/model_cache"))
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=Path("artifacts/models/cache"),
+    )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("artifacts/roadface/yolop_panoptic"),
+        default=Path("artifacts/training/roadface/yolop_panoptic"),
         help="Stores masks, overlays, and metadata. KITTI labels are always written under each trip/kitti.",
     )
     parser.add_argument("--save-masks", action=argparse.BooleanOptionalAction, default=True)

@@ -109,7 +109,7 @@ def main() -> None:
         raise SystemExit("No selected frames.")
     default_suffix = ".mp4" if args.mode == "video" else ".png"
     output = args.output or (
-        Path("artifacts/roadface/label_visualization")
+        Path("artifacts/renders/roadface/label_visualization")
         / f"{trip_dir.name}_{args.label_dir_name}_{args.mode}{default_suffix}"
     )
     output = output.resolve()

@@ -167,7 +167,11 @@ def main() -> None:
         f"note={estimate.note}",
     ]
     rendered = draw_status_panel(overlay, lines)
-    output = args.output or Path("artifacts/roadface/lane_demo") / f"{trip_dir.name}_{stem}_plane_lane.png"
+    output = (
+        args.output
+        or Path("artifacts/renders/roadface/lane_demo")
+        / f"{trip_dir.name}_{stem}_plane_lane.png"
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(output), rendered)
     print(f"Wrote {output.resolve()}")

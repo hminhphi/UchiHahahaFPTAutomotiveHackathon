@@ -70,8 +70,13 @@ members = [
     "infra/*",
 ]
 exclude = [
+    "apps/README.md",
     "apps/web",
     "apps/carsky-hmi",
+    "services/README.md",
+    "packages/README.md",
+    "ml/training/README.md",
+    "infra/README.md",
     "infra/compose",
     "infra/docker",
 ]
@@ -79,8 +84,18 @@ exclude = [
 [tool.pytest.ini_options]
 testpaths = [
     "tests",
+    "apps/api/tests",
+    "apps/carsky-hmi/carsky/bridge",
+    "infra/aws/tests",
+    "ml/sagemaker/dms/tests",
+    "ml/training/roadface/tests",
     "packages/contracts/tests",
     "packages/data-kit/tests",
+    "packages/model-clients/tests",
+    "packages/observability/tests",
+    "services/coaching-worker/tests",
+    "services/dms-worker/tests",
+    "services/event-gateway/tests",
+    "services/fusion-worker/tests",
     "services/roadface-worker/tests",
-    "ml/training/roadface/tests",
 ]

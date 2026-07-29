@@ -77,8 +77,6 @@ checkpoints/
 *.temp
 
 # Research material and cloned analysis repositories
-paper/
-third_party/
 research/papers/raw/
 research/third-party/
 

@@ -25,7 +25,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate road-facing object distance/TTC outputs on full-GT practice trips."
     )
-    parser.add_argument("--pred-dir", type=Path, default=Path("artifacts/roadface/predictions"))
+    parser.add_argument(
+        "--pred-dir",
+        type=Path,
+        default=Path("artifacts/predictions/roadface"),
+    )
     parser.add_argument(
         "--dataset-root",
         type=Path,
@@ -33,7 +37,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--trip", action="append")
     parser.add_argument("--iou-threshold", type=float, default=0.5)
-    parser.add_argument("--output", type=Path, default=Path("artifacts/roadface/evaluation_summary.json"))
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/reports/roadface/evaluation_summary.json"),
+    )
     return parser.parse_args()
 
 

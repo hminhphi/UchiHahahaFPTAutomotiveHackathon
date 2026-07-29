@@ -71,14 +71,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--mask-root",
         type=Path,
-        default=Path("artifacts/roadface/yolop_panoptic"),
+        default=Path("artifacts/training/roadface/yolop_panoptic"),
         help=(
             "Root containing <trip>/lane_masks and <trip>/road_masks from "
             "fleetiq_training_roadface.panoptic_labels."
         ),
     )
     parser.add_argument("--label-dir-name", default="label2_yolop")
-    parser.add_argument("--output-dir", type=Path, default=Path("artifacts/roadface/yolop_lane_offset"))
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts/renders/roadface/yolop_lane_offset"),
+    )
     parser.add_argument("--mode", choices=("frame", "contact-sheet", "window", "video", "gif", "tuner"), default="frame")
     parser.add_argument("--fps", type=float, default=20.0)
     parser.add_argument("--lane-width-m", type=float, default=3.7)

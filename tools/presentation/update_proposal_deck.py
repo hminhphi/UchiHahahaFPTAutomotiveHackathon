@@ -10,9 +10,14 @@ from pptx.util import Pt
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PPTX_PATH = ROOT / "Template for Teams - Hackathon 2026.pptx"
-BACKUP_PATH = ROOT / "artifacts" / "Template for Teams - Hackathon 2026.backup.pptx"
-ASSET_DIR = ROOT / "artifacts" / "pptx-assets"
+PPTX_PATH = ROOT / "docs" / "proposal" / "UchiHahaha-Hackathon2026.pptx"
+BACKUP_PATH = (
+    ROOT
+    / "artifacts"
+    / "presentations"
+    / "UchiHahaha-Hackathon2026.backup.pptx"
+)
+ASSET_DIR = ROOT / "artifacts" / "presentations" / "assets"
 
 NAVY = RGBColor(0x19, 0x22, 0x6D)
 ORANGE = RGBColor(0xF3, 0x70, 0x21)

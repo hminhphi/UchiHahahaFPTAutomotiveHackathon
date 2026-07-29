@@ -35,7 +35,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trip", default="T06-Sample")
     parser.add_argument("--frames", default="100,127", help="Comma list and/or ranges, e.g. 100,127,320-330")
     parser.add_argument("--history-sigma-m", type=float, default=0.35)
-    parser.add_argument("--output", type=Path, default=Path("artifacts/roadface/lane_demo/lane_model_audit.csv"))
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("artifacts/reports/roadface/lane_model_audit.csv"),
+    )
     return parser.parse_args()
 
 

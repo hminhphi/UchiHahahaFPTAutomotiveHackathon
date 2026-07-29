@@ -11,3 +11,8 @@ Inputs: Public references, approved findings, and internal experiment questions.
 Outputs: Decision records, experiment specifications, and reusable research utilities.
 
 Validation: `uv run pytest tests/architecture/test_repository_skeleton.py -v`
+
+Local-only inputs:
+
+- `papers/raw/`: downloaded papers and extracted source material.
+- `third-party/`: cloned external repositories used for analysis.

@@ -546,7 +546,7 @@ def format_m(value: float) -> str:
 
 
 def default_output(trip_name: str, mode: str, frame_id: int) -> Path:
-    out_dir = Path("artifacts/roadface/lane_demo")
+    out_dir = Path("artifacts/renders/roadface/lane_demo")
     out_dir.mkdir(parents=True, exist_ok=True)
     if mode == "frame":
         return out_dir / f"{trip_name}_{frame_id:06d}_lane_mmae.png"

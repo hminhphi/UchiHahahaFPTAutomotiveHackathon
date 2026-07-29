@@ -41,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("artifacts/roadface/yolo_dataset"),
+        default=Path("artifacts/training/roadface/yolo_dataset"),
     )
     parser.add_argument("--min-box-size", type=float, default=4.0)
     parser.add_argument("--lane-filter", action=argparse.BooleanOptionalAction, default=True)

@@ -29,7 +29,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Audit plane-based lane estimation on evenly sampled practice frames.")
     parser.add_argument("--dataset", choices=("practice", "redacted", "all"), default="practice")
     parser.add_argument("--frames-per-trip", type=int, default=5)
-    parser.add_argument("--output-dir", type=Path, default=Path("artifacts/roadface/plane_lane_audit"))
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts/reports/roadface/plane_lane_audit"),
+    )
     parser.add_argument("--depth-policy", choices=("previous", "nearest"), default="nearest")
     parser.add_argument("--lane-width-m", type=float, default=3.7)
     parser.add_argument("--lookahead-m", type=float, default=10.0)

@@ -12,7 +12,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Train or fine-tune road-facing detector models from projected KITTI labels."
     )
-    parser.add_argument("--dataset-yaml", type=Path, default=Path("artifacts/roadface/yolo_dataset/dataset.yaml"))
+    parser.add_argument(
+        "--dataset-yaml",
+        type=Path,
+        default=Path("artifacts/training/roadface/yolo_dataset/dataset.yaml"),
+    )
     parser.add_argument("--prepare", action="store_true", help="Export the YOLO dataset before training.")
     parser.add_argument("--model", default="yolo11l.pt", help="Ultralytics model/checkpoint.")
     parser.add_argument("--epochs", type=int, default=50)
@@ -25,7 +29,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fraction", type=float, default=1.0)
     parser.add_argument("--patience", type=int, default=20)
     parser.add_argument("--close-mosaic", type=int, default=10)
-    parser.add_argument("--project", type=Path, default=Path("artifacts/roadface/train_runs"))
+    parser.add_argument(
+        "--project",
+        type=Path,
+        default=Path("artifacts/training/roadface/train_runs"),
+    )
     parser.add_argument("--name", default="yolo_roadface")
     parser.add_argument(
         "--dry-run",
