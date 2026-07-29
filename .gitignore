@@ -12,6 +12,7 @@ htmlcov/
 build/
 dist/
 wheels/
+cdk.out/
 
 # Environments and local configuration
 .venv/

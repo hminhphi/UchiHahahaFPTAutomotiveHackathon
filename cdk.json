@@ -1,0 +1,7 @@
+{
+  "app": "uv run --frozen --package fleetiq-infra python infra/aws/app.py",
+  "context": {
+    "@aws-cdk/core:defaultCrossStackReferences": "strong",
+    "@aws-cdk/core:validateAgainstDefaultRules": true
+  }
+}
