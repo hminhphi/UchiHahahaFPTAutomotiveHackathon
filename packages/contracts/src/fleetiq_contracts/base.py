@@ -24,6 +24,8 @@ def validate_mqtt_segment(value: str) -> str:
     """Return a usable MQTT path segment or raise a clear validation error."""
     if not value or value.strip() != value:
         raise ValueError("MQTT identifier segments must be non-empty and unpadded")
+    if any(character.isspace() or ord(character) < 32 for character in value):
+        raise ValueError("MQTT identifier segments cannot contain whitespace or control characters")
     if any(character in value for character in _FORBIDDEN_MQTT_SEGMENT_CHARACTERS):
         raise ValueError("MQTT identifier segments cannot contain '/', '+', or '#'")
     return value

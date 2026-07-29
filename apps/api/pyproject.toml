@@ -8,6 +8,7 @@ dependencies = [
     "fastapi>=0.116,<1",
     "fleetiq-contracts",
     "fleetiq-observability",
+    "redis>=6,<7",
     "uvicorn>=0.35,<1",
 ]
 

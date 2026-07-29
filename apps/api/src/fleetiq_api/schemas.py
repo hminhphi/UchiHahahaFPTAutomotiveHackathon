@@ -1,10 +1,19 @@
 """Typed HTTP envelope models owned by the API boundary."""
 
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from fleetiq_contracts.base import ContractModel
-from pydantic import Field
+from fleetiq_contracts.base import ContractModel, validate_mqtt_segment
+from pydantic import AfterValidator, Field, field_validator
+
+
+def _utc_datetime(value: datetime) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("timestamps must include a timezone offset")
+    return value.astimezone(UTC)
+
+
+UTCDateTime = Annotated[datetime, AfterValidator(_utc_datetime)]
 
 
 def utc_now() -> datetime:
@@ -15,7 +24,7 @@ class ApiEnvelope(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     request_id: str = Field(min_length=1)
     correlation_id: str = Field(min_length=1)
-    timestamp: datetime
+    timestamp: UTCDateTime
 
 
 class HealthData(ContractModel):
@@ -31,6 +40,11 @@ class TripSummary(ContractModel):
     trip_id: str
     status: Literal["available", "processing", "complete", "failed"] = "available"
 
+    @field_validator("trip_id")
+    @classmethod
+    def validate_trip_id(cls, value: str) -> str:
+        return validate_mqtt_segment(value)
+
 
 class TripListData(ContractModel):
     items: tuple[TripSummary, ...] = ()
@@ -44,13 +58,23 @@ class TripListEnvelope(ApiEnvelope):
 class AnalysisJobCreate(ContractModel):
     trip_id: str = Field(min_length=1, max_length=128)
 
+    @field_validator("trip_id")
+    @classmethod
+    def validate_trip_id(cls, value: str) -> str:
+        return validate_mqtt_segment(value)
+
 
 class AnalysisJob(ContractModel):
     job_id: str
     trip_id: str
     status: Literal["queued", "running", "complete", "failed"]
     idempotency_key: str
-    created_at: datetime
+    created_at: UTCDateTime
+
+    @field_validator("trip_id")
+    @classmethod
+    def validate_trip_id(cls, value: str) -> str:
+        return validate_mqtt_segment(value)
 
 
 class JobEnvelope(ApiEnvelope):

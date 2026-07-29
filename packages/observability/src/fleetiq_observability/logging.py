@@ -2,8 +2,9 @@
 
 import json
 import logging
+import sys
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TextIO
 
 from .redaction import redact
 
@@ -30,8 +31,17 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(redact(payload), ensure_ascii=True, separators=(",", ":"))
 
 
-def configure_json_logging(level: int = logging.INFO) -> None:
-    """Configure the root logger once for JSON output."""
-    handler = logging.StreamHandler()
+def configure_json_logging(
+    level: int = logging.INFO,
+    *,
+    logger: logging.Logger | None = None,
+    stream: TextIO | None = None,
+) -> logging.Handler:
+    """Attach one JSON handler without replacing application-owned handlers."""
+    target = logger or logging.getLogger()
+    handler = logging.StreamHandler(stream or sys.stderr)
     handler.setFormatter(JsonFormatter())
-    logging.basicConfig(level=level, handlers=[handler], force=True)
+    handler.setLevel(level)
+    target.setLevel(level)
+    target.addHandler(handler)
+    return handler

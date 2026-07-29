@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Protocol
 from uuid import uuid4
+
+from redis.exceptions import RedisError
 
 from .schemas import AnalysisJob, AnalysisJobCreate, TripSummary
 from .ws.frame_protocol import CameraFrame
@@ -52,6 +56,149 @@ class LatestStateBroker(Protocol):
 
 class IdempotencyConflictError(ValueError):
     """Raised when one idempotency key is reused for a different command."""
+
+
+class JobRepositoryUnavailableError(RuntimeError):
+    """Raised when the durable job store cannot complete a bounded operation."""
+
+
+class AsyncRedisClient(Protocol):
+    async def eval(self, script: str, numkeys: int, *values: str) -> Any: ...
+
+    async def get(self, key: str) -> Any: ...
+
+    async def ping(self) -> Any: ...
+
+    async def aclose(self) -> None: ...
+
+
+_CREATE_JOB_SCRIPT = """
+local existing = redis.call("GET", KEYS[1])
+if existing then
+  local decoded = cjson.decode(existing)
+  if decoded["fingerprint"] == ARGV[1] then
+    return {"existing", existing}
+  end
+  return {"conflict", existing}
+end
+redis.call("SET", KEYS[1], ARGV[2])
+redis.call("SET", KEYS[2], ARGV[3])
+return {"created", ARGV[2]}
+"""
+
+
+class RedisJobRepository:
+    """Durable job repository with atomic, cross-process idempotency."""
+
+    def __init__(self, client: AsyncRedisClient, *, timeout_seconds: float = 2.0) -> None:
+        if timeout_seconds <= 0:
+            raise ValueError("Redis timeout must be positive")
+        self._client = client
+        self._timeout_seconds = timeout_seconds
+        self._started = False
+
+    async def start(self) -> None:
+        self._started = True
+
+    async def close(self) -> None:
+        self._started = False
+        await self._client.aclose()
+
+    async def ready(self) -> bool:
+        if not self._started:
+            return False
+        try:
+            return bool(await asyncio.wait_for(self._client.ping(), self._timeout_seconds))
+        except (TimeoutError, RedisError, OSError):
+            return False
+
+    async def create(
+        self,
+        command: AnalysisJobCreate,
+        *,
+        idempotency_key: str,
+    ) -> AnalysisJob:
+        fingerprint = hashlib.sha256(
+            command.model_dump_json().encode("utf-8")
+        ).hexdigest()
+        job = AnalysisJob(
+            job_id=str(uuid4()),
+            trip_id=command.trip_id,
+            status="queued",
+            idempotency_key=idempotency_key,
+            created_at=datetime.now(UTC),
+        )
+        idempotency_payload = json.dumps(
+            {
+                "fingerprint": fingerprint,
+                "job": job.model_dump(mode="json"),
+            },
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        job_payload = job.model_dump_json()
+        idempotency_digest = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
+        idempotency_redis_key = f"fleetiq:v1:jobs:idempotency:{idempotency_digest}"
+        job_redis_key = f"fleetiq:v1:jobs:{job.job_id}"
+        try:
+            result = await asyncio.wait_for(
+                self._client.eval(
+                    _CREATE_JOB_SCRIPT,
+                    2,
+                    idempotency_redis_key,
+                    job_redis_key,
+                    fingerprint,
+                    idempotency_payload,
+                    job_payload,
+                ),
+                self._timeout_seconds,
+            )
+        except TimeoutError:
+            raise JobRepositoryUnavailableError("Redis job operation timed out") from None
+        except (RedisError, OSError):
+            raise JobRepositoryUnavailableError("Redis job operation failed") from None
+
+        try:
+            status = _redis_text(result[0])
+            stored = json.loads(_redis_text(result[1]))
+        except (IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+            raise JobRepositoryUnavailableError("Redis returned invalid job data") from None
+        if status == "conflict":
+            raise IdempotencyConflictError(idempotency_key)
+        if status not in {"created", "existing"}:
+            raise JobRepositoryUnavailableError("Redis returned an invalid job status")
+        try:
+            return AnalysisJob.model_validate_json(
+                json.dumps(stored["job"], ensure_ascii=True, separators=(",", ":"))
+            )
+        except (KeyError, TypeError, ValueError):
+            raise JobRepositoryUnavailableError("Redis returned invalid job data") from None
+
+    async def get(self, job_id: str) -> AnalysisJob | None:
+        try:
+            value = await asyncio.wait_for(
+                self._client.get(f"fleetiq:v1:jobs:{job_id}"),
+                self._timeout_seconds,
+            )
+        except TimeoutError:
+            raise JobRepositoryUnavailableError("Redis job lookup timed out") from None
+        except (RedisError, OSError):
+            raise JobRepositoryUnavailableError("Redis job lookup failed") from None
+        if value is None:
+            return None
+        try:
+            return AnalysisJob.model_validate_json(_redis_text(value))
+        except (TypeError, ValueError):
+            raise JobRepositoryUnavailableError("Redis returned invalid job data") from None
+
+
+def _redis_text(value: Any) -> str:
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    if isinstance(value, str):
+        return value
+    raise TypeError("Redis response must be bytes or text")
 
 
 @dataclass
@@ -209,12 +356,26 @@ def create_test_dependencies() -> AppDependencies:
     )
 
 
-def create_external_dependencies(redis_url: str, database_url: str) -> AppDependencies:
+def create_external_dependencies(
+    redis_url: str,
+    database_url: str,
+    *,
+    redis_client: AsyncRedisClient | None = None,
+    redis_timeout_seconds: float = 2.0,
+) -> AppDependencies:
+    if redis_client is None:
+        from redis.asyncio import Redis
+
+        redis_client = Redis.from_url(redis_url, decode_responses=True)
+    redis_repository = RedisJobRepository(
+        redis_client,
+        timeout_seconds=redis_timeout_seconds,
+    )
     return AppDependencies(
-        redis=ConfiguredExternalResource("redis", redis_url),
+        redis=redis_repository,
         database=ConfiguredExternalResource("database", database_url),
         trips=InMemoryTripRepository(),
-        jobs=InMemoryJobRepository(),
+        jobs=redis_repository,
         camera_sink=InMemoryCameraFrameSink(),
         live_state=InMemoryLatestStateBroker(),
     )

@@ -8,13 +8,14 @@ import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from time import perf_counter
+from typing import TextIO
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fleetiq_observability import redact
+from fleetiq_observability import configure_json_logging, redact
 
 from .config import ApiSettings
 from .dependencies import (
@@ -53,6 +54,7 @@ def create_app(
     dependencies: AppDependencies | None = None,
     max_metadata_bytes: int | None = None,
     max_frame_bytes: int | None = None,
+    log_stream: TextIO | None = None,
 ) -> FastAPI:
     """Create an API with explicit configuration and injectable resources."""
     selected = settings or ApiSettings.from_environment(os.environ, testing_override=testing)
@@ -77,6 +79,7 @@ def create_app(
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         resources = (application.state.dependencies.redis, application.state.dependencies.database)
         started = []
+        log_handler = configure_json_logging(logger=_LOGGER, stream=log_stream)
         try:
             for resource in resources:
                 await resource.start()
@@ -85,6 +88,8 @@ def create_app(
         finally:
             for resource in reversed(started):
                 await resource.close()
+            _LOGGER.removeHandler(log_handler)
+            log_handler.close()
 
     application = FastAPI(title="FleetIQ API", version="1.0.0", lifespan=lifespan)
     application.state.settings = selected

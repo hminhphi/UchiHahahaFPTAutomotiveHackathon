@@ -40,3 +40,9 @@ def test_topic_registry_rejects_mqtt_wildcards_and_separators(identifier: str) -
     """Unsafe segments could alter the topic hierarchy or subscribe to wildcards."""
     with pytest.raises(ValueError):
         TopicRegistry.risk(identifier)
+
+
+@pytest.mark.parametrize("identifier", ["trip one", "trip\tone", "trip\none", "trip\u0000"])
+def test_topic_registry_rejects_whitespace_and_control_characters(identifier: str) -> None:
+    with pytest.raises(ValueError):
+        TopicRegistry.risk(identifier)

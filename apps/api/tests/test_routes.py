@@ -1,5 +1,10 @@
+from datetime import datetime
+
+import pytest
 from fastapi.testclient import TestClient
+from fleetiq_api.dependencies import create_test_dependencies
 from fleetiq_api.main import create_app
+from fleetiq_api.schemas import AnalysisJob
 
 
 def test_trip_list_uses_stable_typed_envelope() -> None:
@@ -40,3 +45,44 @@ def test_reusing_idempotency_key_for_different_trip_is_conflict() -> None:
 
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "idempotency_conflict"
+
+
+@pytest.mark.parametrize("trip_id", [" T01", "T01 ", "T 01", "T01\tSample", "T01\nSample", "T01\u0000"])
+def test_job_creation_rejects_unsafe_trip_identifier(trip_id: str) -> None:
+    with TestClient(create_app(testing=True)) as client:
+        response = client.post(
+            "/api/v1/jobs",
+            json={"trip_id": trip_id},
+            headers={"Idempotency-Key": "invalid-trip"},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_job_route_rejects_naive_timestamp_from_repository() -> None:
+    class BadJobRepository:
+        async def create(self, command, *, idempotency_key):
+            return AnalysisJob.model_construct(
+                job_id="job-bad-time",
+                trip_id=command.trip_id,
+                status="queued",
+                idempotency_key=idempotency_key,
+                created_at=datetime(2026, 7, 29, 12, 0),  # noqa: DTZ001 - invalid fixture
+            )
+
+        async def get(self, job_id):
+            return None
+
+    dependencies = create_test_dependencies()
+    dependencies.jobs = BadJobRepository()
+
+    with TestClient(create_app(testing=True, dependencies=dependencies)) as client:
+        response = client.post(
+            "/api/v1/jobs",
+            json={"trip_id": "T01-Sample"},
+            headers={"Idempotency-Key": "bad-repository-time"},
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "invalid_repository_data"

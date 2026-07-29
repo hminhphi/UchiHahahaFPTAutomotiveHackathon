@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 from datetime import datetime
@@ -70,6 +71,34 @@ def test_request_log_contains_ids_and_redacts_authorization(caplog) -> None:
     serialized = json.dumps(records[-1].fleetiq)
     assert "should-not-leak" not in serialized
     assert records[-1].fleetiq["correlation_id"] == "correlation-log"
+
+
+def test_app_emits_json_logs_without_clobbering_root_handlers() -> None:
+    output = io.StringIO()
+    unrelated = logging.StreamHandler(io.StringIO())
+    root = logging.getLogger()
+    root.addHandler(unrelated)
+    try:
+        with TestClient(create_app(testing=True, log_stream=output)) as client:
+            client.get(
+                "/health/live?X-Amz-Credential=private&X-Amz-Signature=url-secret",
+                headers={
+                    "Authorization": "Bearer header-secret",
+                    "X-Request-ID": "request-json-log",
+                    "X-Correlation-ID": "correlation-json-log",
+                },
+            )
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        record = next(item for item in records if item.get("request_id") == "request-json-log")
+        serialized = json.dumps(record)
+        assert record["correlation_id"] == "correlation-json-log"
+        assert record["headers"]["authorization"] == "[REDACTED]"
+        assert "header-secret" not in serialized
+        assert "url-secret" not in serialized
+        assert record["url"].endswith("?[REDACTED]")
+        assert unrelated in root.handlers
+    finally:
+        root.removeHandler(unrelated)
 
 
 def test_cors_allows_only_configured_origin() -> None:
