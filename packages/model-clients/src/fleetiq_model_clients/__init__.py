@@ -3,7 +3,11 @@
 from .base import ModelClient
 from .config import EndpointKind, SageMakerEndpointSettings
 from .local import LocalFixtureModelClient
-from .sagemaker import SageMakerInvocationError, SageMakerModelClient
+from .sagemaker import (
+    SageMakerInvocationError,
+    SageMakerModelClient,
+    SageMakerResponseIdentityError,
+)
 
 __all__ = [
     "EndpointKind",
@@ -12,4 +16,5 @@ __all__ = [
     "SageMakerEndpointSettings",
     "SageMakerInvocationError",
     "SageMakerModelClient",
+    "SageMakerResponseIdentityError",
 ]

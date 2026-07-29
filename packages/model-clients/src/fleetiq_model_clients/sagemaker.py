@@ -25,6 +25,10 @@ class SageMakerInvocationError(RuntimeError):
     """A sanitized failure safe for worker logs."""
 
 
+class SageMakerResponseIdentityError(SageMakerInvocationError):
+    """A response belongs to a different request or frame."""
+
+
 def _create_runtime_client(settings: SageMakerEndpointSettings) -> _RuntimeClient:
     try:
         import boto3
@@ -103,10 +107,11 @@ class SageMakerModelClient:
     def infer(self, request: InferenceRequest) -> InferenceResponse:
         """Send the complete versioned request as endpoint JSON."""
         correlation = quote(request.correlation_id, safe="")
-        return self.infer_bytes(
+        return self._invoke(
             request.model_dump_json().encode("utf-8"),
             content_type="application/json",
             custom_attributes=f"correlation-id={correlation}",
+            expected_request=request,
         )
 
     def infer_bytes(
@@ -117,6 +122,21 @@ class SageMakerModelClient:
         custom_attributes: str | None = None,
     ) -> InferenceResponse:
         """Send a direct JPEG/tensor payload and decode its typed response."""
+        return self._invoke(
+            body,
+            content_type=content_type,
+            custom_attributes=custom_attributes,
+            expected_request=None,
+        )
+
+    def _invoke(
+        self,
+        body: bytes,
+        *,
+        content_type: str,
+        custom_attributes: str | None,
+        expected_request: InferenceRequest | None,
+    ) -> InferenceResponse:
         media_type = _validate_media_type(content_type, field="content_type")
         arguments: dict[str, Any] = {
             "EndpointName": self.endpoint_name,
@@ -129,19 +149,32 @@ class SageMakerModelClient:
                 custom_attributes
             )
 
+        result: Mapping[str, Any] | None = None
+        invocation_error_type: str | None = None
         try:
             result = self._runtime_client.invoke_endpoint(**arguments)
         # SDK exception messages may contain signed URLs or request metadata.
         except Exception as error:  # noqa: BLE001
-            error_type = type(error).__name__
+            invocation_error_type = type(error).__name__
+        if invocation_error_type is not None:
             raise SageMakerInvocationError(
                 f"SageMaker inference failed for endpoint "
-                f"'{self.endpoint_name}' ({error_type})"
-            ) from None
+                f"'{self.endpoint_name}' ({invocation_error_type})"
+            )
+        if result is None:
+            raise SageMakerInvocationError(
+                f"SageMaker endpoint '{self.endpoint_name}' returned an "
+                "invalid response envelope"
+            )
 
-        return self._decode_response(result)
+        response = self._decode_response(result)
+        if expected_request is not None:
+            self._validate_response_identity(expected_request, response)
+        return response
 
     def _decode_response(self, result: Mapping[str, Any]) -> InferenceResponse:
+        response: InferenceResponse | None = None
+        response_is_invalid = False
         try:
             response_body = result["Body"]
             if hasattr(response_body, "read"):
@@ -150,10 +183,35 @@ class SageMakerModelClient:
                 payload = response_body
             if not isinstance(payload, bytes):
                 raise TypeError("SageMaker response body must be bytes")
-            return InferenceResponse.model_validate_json(payload)
+            response = InferenceResponse.model_validate_json(payload)
         # Streaming and validation failures cross an untrusted response boundary.
         except Exception:  # noqa: BLE001
+            response_is_invalid = True
+        if response_is_invalid or response is None:
             raise SageMakerInvocationError(
                 f"SageMaker endpoint '{self.endpoint_name}' returned an "
                 "invalid InferenceResponse"
-            ) from None
+            )
+        return response
+
+    @staticmethod
+    def _validate_response_identity(
+        request: InferenceRequest,
+        response: InferenceResponse,
+    ) -> None:
+        mismatches = [
+            field
+            for field in (
+                "request_id",
+                "correlation_id",
+                "trip_id",
+                "frame_index",
+                "occurred_at",
+            )
+            if getattr(response, field) != getattr(request, field)
+        ]
+        if mismatches:
+            fields = ", ".join(mismatches)
+            raise SageMakerResponseIdentityError(
+                f"SageMaker response identity mismatch: {fields}"
+            )

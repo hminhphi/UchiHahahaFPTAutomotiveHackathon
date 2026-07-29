@@ -14,11 +14,15 @@ class LocalFixtureModelClient:
     @classmethod
     def from_fixture(cls, path: str | Path) -> "LocalFixtureModelClient":
         """Load and validate a response fixture without exposing bad contents."""
+        response: InferenceResponse | None = None
+        fixture_is_invalid = False
         try:
             payload = Path(path).read_bytes()
             response = InferenceResponse.model_validate_json(payload)
         except (OSError, ValueError):
-            raise ValueError("invalid InferenceResponse fixture") from None
+            fixture_is_invalid = True
+        if fixture_is_invalid or response is None:
+            raise ValueError("invalid InferenceResponse fixture")
         return cls(response)
 
     def infer(self, request: InferenceRequest) -> InferenceResponse:

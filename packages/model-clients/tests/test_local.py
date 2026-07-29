@@ -54,6 +54,29 @@ def test_local_client_implements_typed_request_interface() -> None:
     assert response.producer == "roadface-model"
 
 
+def test_local_client_keeps_typed_identity_deterministic() -> None:
+    client = LocalFixtureModelClient.from_fixture(FIXTURES / "road_response.json")
+    request = make_request()
+
+    first = client.infer(request)
+    second = client.infer(request)
+
+    assert first == second
+    assert (
+        first.request_id,
+        first.correlation_id,
+        first.trip_id,
+        first.frame_index,
+        first.occurred_at,
+    ) == (
+        request.request_id,
+        request.correlation_id,
+        request.trip_id,
+        request.frame_index,
+        request.occurred_at,
+    )
+
+
 def test_local_client_rejects_invalid_fixture_without_leaking_contents(
     tmp_path: Path,
 ) -> None:
@@ -66,6 +89,8 @@ def test_local_client_rejects_invalid_fixture_without_leaking_contents(
 
     assert "invalid InferenceResponse fixture" in str(error.value)
     assert secret not in str(error.value)
+    assert error.value.__cause__ is None
+    assert error.value.__context__ is None
 
 
 def test_import_does_not_eagerly_load_aws_sdk() -> None:

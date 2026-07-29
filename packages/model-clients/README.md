@@ -41,4 +41,7 @@ payloads.
 
 Adapter exceptions deliberately omit response bodies, authorization values,
 AWS exception messages, and URL query strings. Callers should log only the
-sanitized adapter exception.
+sanitized adapter exception. Typed `infer(request)` calls also require the
+response to match the request's ID, correlation ID, trip, frame, and timestamp
+instant; a mismatched response raises `SageMakerResponseIdentityError` without
+including response values.
