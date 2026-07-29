@@ -14,10 +14,15 @@ RUN uv sync --frozen --no-dev --package fleetiq-roadface --extra headless --no-e
 
 FROM python:3.12-slim-bookworm AS runtime
 
+LABEL org.opencontainers.image.title="FleetIQ roadface worker"
+
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
+
+RUN useradd --create-home --uid 10001 fleetiq
+USER fleetiq
 
 ENTRYPOINT ["fleetiq-roadface"]

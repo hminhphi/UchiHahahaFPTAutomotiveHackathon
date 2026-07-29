@@ -16,11 +16,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "paho-mqtt>=2.1,<3",
     "pytest",
     "pytest-cov",
     "ruff",
     "mypy",
     "jsonschema>=4.23",
+    "websockets>=15,<16",
 ]
 
 [project.optional-dependencies]

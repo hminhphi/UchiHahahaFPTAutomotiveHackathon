@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+LABEL org.opencontainers.image.title="FleetIQ CarSky bridge"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     BRIDGE_PORT=8090

@@ -1,0 +1,178 @@
+name: ${COMPOSE_PROJECT_NAME:-fleetiq}
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  postgres:
+    <<: *service-defaults
+    image: postgres:16-bookworm
+    profiles: [core, perception, full]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fleetiq}
+      POSTGRES_USER: ${POSTGRES_USER:-fleetiq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fleetiq-local-only}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/compose/postgres/init.sql:/docker-entrypoint-initdb.d/10-fleetiq.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks: [backend]
+
+  redis:
+    <<: *service-defaults
+    image: redis:7.4-bookworm
+    profiles: [core, perception, full]
+    command: [redis-server, --appendonly, "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+
+  mosquitto:
+    <<: *service-defaults
+    image: eclipse-mosquitto:2.0
+    profiles: [core, perception, full]
+    ports:
+      - "${FLEETIQ_MQTT_PORT:-1883}:1883"
+    volumes:
+      - ./infra/compose/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    healthcheck:
+      test:
+        [
+          CMD-SHELL,
+          "mosquitto_pub -h 127.0.0.1 -t fleetiq/health -m ping",
+        ]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+      start_period: 5s
+    networks: [backend]
+
+  api:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    profiles: [core, perception, full]
+    environment:
+      FLEETIQ_TESTING: "true"
+      FLEETIQ_ALLOWED_ORIGINS: ${FLEETIQ_ALLOWED_ORIGINS:-http://localhost:3000}
+      FLEETIQ_REDIS_URL: redis://redis:6379/0
+      FLEETIQ_DATABASE_URL: postgresql://${POSTGRES_USER:-fleetiq}:${POSTGRES_PASSWORD:-fleetiq-local-only}@postgres:5432/${POSTGRES_DB:-fleetiq}
+    ports:
+      - "${FLEETIQ_API_PORT:-8000}:8000"
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data
+        read_only: true
+      - type: bind
+        source: ./artifacts
+        target: /artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mosquitto:
+        condition: service_healthy
+    networks: [edge, backend]
+
+  web:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_WS_BASE_URL: ${NEXT_PUBLIC_WS_BASE_URL:-ws://localhost:8000}
+    profiles: [core, perception, full]
+    environment:
+      FLEETIQ_API_BASE_URL: http://api:8000
+    ports:
+      - "${FLEETIQ_WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [edge]
+
+  event-gateway:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: services/event-gateway/Dockerfile
+    profiles: [core, perception, full]
+    environment:
+      FLEETIQ_MQTT_HOST: mosquitto
+      FLEETIQ_MQTT_PORT: "1883"
+      FLEETIQ_MQTT_TLS: "false"
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    networks: [backend]
+
+  model-mock:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: infra/docker/model-mock/Dockerfile
+    profiles: [perception, full]
+    environment:
+      MODEL_MOCK_PORT: "8080"
+    ports:
+      - "${FLEETIQ_MODEL_MOCK_PORT:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data
+        read_only: true
+      - type: bind
+        source: ./artifacts
+        target: /artifacts
+    networks: [edge, backend]
+
+  carsky-bridge:
+    <<: *service-defaults
+    build:
+      context: apps/carsky-hmi/carsky/bridge
+      dockerfile: Dockerfile
+    profiles: [full]
+    environment:
+      BRIDGE_HOST: 0.0.0.0
+      BRIDGE_PORT: "8090"
+    ports:
+      - "${FLEETIQ_CARSKY_BRIDGE_PORT:-8090}:8090"
+    healthcheck:
+      test:
+        [
+          CMD,
+          python,
+          -c,
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=2)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [edge]
+
+networks:
+  edge:
+  backend:
+    internal: true
+
+volumes:
+  postgres-data:
+  redis-data:
+  mosquitto-data:

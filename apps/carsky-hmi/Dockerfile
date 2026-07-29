@@ -1,5 +1,7 @@
 FROM gradle:8.10.2-jdk17 AS builder
 
+LABEL org.opencontainers.image.title="FleetIQ CarSky Android HMI builder"
+
 ARG ANDROID_CLI_TOOLS=11076708
 ENV ANDROID_HOME=/opt/android-sdk \
     ANDROID_SDK_ROOT=/opt/android-sdk
