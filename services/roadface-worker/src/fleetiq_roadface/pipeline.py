@@ -56,7 +56,6 @@ class PipelineOptions:
     detector_source: Literal["labels", "labels_custom", "model", "none"] = "labels"
     custom_label_dir_name: str = "label2_custom"
     depth_source: Literal["gt", "stereo", "model", "none"] = "gt"
-    depth_policy: Literal["previous", "nearest", "exact"] = "previous"
     lane_method: Literal["classical", "plane"] = "classical"
     lane_filter: bool = True
     lane_margin_m: float = 0.25
@@ -102,19 +101,17 @@ class RoadfacePipeline:
             raise TypeError(f"Trip '{trip.trip_id}' frames must be a list")
         if not raw_frames:
             return []
-        start = max(0, start)
-        end = min(len(raw_frames) - 1, len(raw_frames) - 1 if end is None else end)
-        if end < start:
-            return []
         written: list[Path] = []
         processed = 0
         self._trackers[trip.trip_id] = ObstacleTracker()
-        for list_index in range(start, end + 1, max(1, stride)):
+        for _, list_index, frame in _select_frames(
+            raw_frames,
+            start=start,
+            end=end,
+            stride=stride,
+        ):
             if max_frames is not None and processed >= max_frames:
                 break
-            frame = raw_frames[list_index]
-            if not isinstance(frame, dict):
-                continue
             result = self.process_frame(
                 trip,
                 frame=frame,
@@ -209,9 +206,7 @@ class RoadfacePipeline:
         options: PipelineOptions,
     ) -> tuple[np.ndarray | None, DepthEstimate | None]:
         if options.depth_source == "gt":
-            depth = load_ground_truth_depth(
-                trip, frame_index, policy=options.depth_policy
-            )
+            depth = load_ground_truth_depth(trip, frame_index)
             return depth, summarize_depth(depth, "ground_truth")
         if options.depth_source == "stereo":
             right_path = find_frame(trip.image_3_dir, frame_index)
@@ -322,6 +317,29 @@ def _frame_index(frame: dict[str, Any], fallback: int) -> int:
         return max(0, int(value))
     except (TypeError, ValueError):
         return fallback
+
+
+def _select_frames(
+    raw_frames: list[Any],
+    *,
+    start: int,
+    end: int | None,
+    stride: int,
+) -> list[tuple[int, int, dict[str, Any]]]:
+    """Filter and sort organizer records by resolved frame ID."""
+    lower = max(0, start)
+    upper = end
+    resolved = [
+        (_frame_index(frame, list_index), list_index, frame)
+        for list_index, frame in enumerate(raw_frames)
+        if isinstance(frame, dict)
+    ]
+    selected = [
+        item
+        for item in sorted(resolved, key=lambda item: (item[0], item[1]))
+        if item[0] >= lower and (upper is None or item[0] <= upper)
+    ]
+    return selected[:: max(1, stride)]
 
 
 def _timestamp_s(frame: dict[str, Any], list_index: int, fps: float) -> float:

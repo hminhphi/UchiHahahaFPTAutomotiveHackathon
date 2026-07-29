@@ -15,14 +15,13 @@ from .types import DepthEstimate, Detection
 def load_ground_truth_depth(
     trip: TripRecord,
     frame_index: int,
-    policy: Literal["exact", "previous", "nearest"] = "previous",
 ) -> np.ndarray | None:
-    """Load sparse depth, with a causal default that never selects the future."""
+    """Load the latest sparse depth at or before the requested frame."""
     path = find_frame(
         trip.depth_dir,
         frame_index,
         suffixes=(".npy",),
-        policy=policy,
+        policy="previous",
     )
     if path is None:
         return None

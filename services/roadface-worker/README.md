@@ -21,6 +21,10 @@ The default output is
 callers instantiate `RoadfacePipeline` with `DatasetPaths`, an output root, and
 optional detector/depth clients.
 
+`--start` and `--end` select organizer frame IDs, even when frame records are
+sparse or out of order. Ground-truth depth lookup is causal and uses only the
+latest depth sample at or before each frame.
+
 Validate the package:
 
 ```powershell

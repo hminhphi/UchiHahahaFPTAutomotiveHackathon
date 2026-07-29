@@ -7,6 +7,7 @@ from uuid import UUID
 
 from fleetiq_contracts import InferenceResponse
 from fleetiq_data import DatasetPaths
+from fleetiq_roadface import pipeline
 from fleetiq_roadface.pipeline import RoadfacePipeline
 from fleetiq_roadface.types import (
     DepthEstimate,
@@ -91,3 +92,27 @@ def test_pipeline_requires_explicit_paths_and_model_dependencies(
 
     assert pipeline.dataset_paths.root == tmp_path / "dataset"
     assert pipeline.output_root == tmp_path / "output"
+
+
+def test_frame_range_filters_and_sorts_organizer_frame_ids() -> None:
+    frames = [
+        {"frame_id": 120, "timestamp": 12.0},
+        {"frame_id": 90, "timestamp": 9.0},
+        {"frame_id": 105, "timestamp": 10.5},
+    ]
+
+    selected = pipeline._select_frames(frames, start=90, end=120, stride=2)
+
+    assert [frame_id for frame_id, _, _ in selected] == [90, 120]
+
+
+def test_sparse_nonzero_frame_range_does_not_use_list_positions() -> None:
+    frames = [
+        {"frame_id": 90},
+        {"frame_id": 105},
+        {"frame_id": 120},
+    ]
+
+    selected = pipeline._select_frames(frames, start=100, end=110, stride=1)
+
+    assert [frame_id for frame_id, _, _ in selected] == [105]

@@ -49,14 +49,19 @@ class ClosingSpeedEstimator:
         relative_speed_mps: float | None = None
         if previous is not None:
             frame_delta_s = timestamp_s - previous.timestamp_s
-            if frame_delta_s > 0.0:
-                measured = (previous.distance_m - distance_m) / frame_delta_s
-                relative_speed_mps = measured
-                if previous.relative_speed_mps is not None:
-                    relative_speed_mps = (
-                        self.smoothing_alpha * measured
-                        + (1.0 - self.smoothing_alpha) * previous.relative_speed_mps
-                    )
+            if frame_delta_s <= 0.0:
+                return TrackedObstacle(
+                    track_id=track_id,
+                    timestamp_s=timestamp_s,
+                    distance_m=distance_m,
+                )
+            measured = (previous.distance_m - distance_m) / frame_delta_s
+            relative_speed_mps = measured
+            if previous.relative_speed_mps is not None:
+                relative_speed_mps = (
+                    self.smoothing_alpha * measured
+                    + (1.0 - self.smoothing_alpha) * previous.relative_speed_mps
+                )
         ttc_s = None
         if (
             relative_speed_mps is not None
@@ -90,9 +95,11 @@ class ObstacleTracker:
         max_missed: int = 10,
         iou_threshold: float = 0.08,
         smoothing_alpha: float = 0.45,
+        maximum_association_speed_mps: float = 45.0,
     ) -> None:
         self.max_missed = max_missed
         self.iou_threshold = iou_threshold
+        self.maximum_association_speed_mps = maximum_association_speed_mps
         self.next_id = 1
         self.tracks: dict[int, _Track] = {}
         self.motion = ClosingSpeedEstimator(smoothing_alpha=smoothing_alpha)
@@ -108,7 +115,7 @@ class ObstacleTracker:
             key=lambda item: item.bbox[2] - item.bbox[0],
             reverse=True,
         ):
-            track_id = self._match(detection, unmatched_tracks)
+            track_id = self._match(detection, unmatched_tracks, timestamp_s)
             if track_id is None:
                 track_id = self.next_id
                 self.next_id += 1
@@ -128,6 +135,7 @@ class ObstacleTracker:
         self,
         detection: Detection,
         available: set[int],
+        timestamp_s: float,
     ) -> int | None:
         best_id = None
         best_score = 0.0
@@ -135,11 +143,27 @@ class ObstacleTracker:
             track = self.tracks[track_id]
             if track.object_type != detection.object_type:
                 continue
+            if not self._motion_is_plausible(track, detection, timestamp_s):
+                continue
             score = iou(track.bbox, detection.bbox)
             if score > best_score:
                 best_id = track_id
                 best_score = score
         return best_id if best_score >= self.iou_threshold else None
+
+    def _motion_is_plausible(
+        self,
+        track: _Track,
+        detection: Detection,
+        timestamp_s: float,
+    ) -> bool:
+        if track.distance_m is None or detection.distance_m is None:
+            return timestamp_s > track.timestamp_s
+        elapsed_s = timestamp_s - track.timestamp_s
+        if elapsed_s <= 0.0:
+            return False
+        distance_rate = abs(track.distance_m - detection.distance_m) / elapsed_s
+        return distance_rate <= self.maximum_association_speed_mps
 
     def _update_track(
         self,

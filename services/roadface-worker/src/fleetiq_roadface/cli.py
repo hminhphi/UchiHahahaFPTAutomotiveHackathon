@@ -49,11 +49,6 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default="gt",
     )
     parser.add_argument(
-        "--depth-policy",
-        choices=("previous", "nearest", "exact"),
-        default="previous",
-    )
-    parser.add_argument(
         "--lane-method",
         choices=("classical", "plane"),
         default="classical",
@@ -107,7 +102,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         detector_source=args.detector,
         custom_label_dir_name=args.custom_label_dir_name,
         depth_source=args.depth_source,
-        depth_policy=args.depth_policy,
         lane_method=args.lane_method,
         lane_filter=args.lane_filter,
         lane_margin_m=args.lane_margin_m,
