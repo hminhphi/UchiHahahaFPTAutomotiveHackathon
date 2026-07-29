@@ -1,0 +1,14 @@
+{
+  "name": "fleetiq-guardian",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "web:lint": "pnpm --filter @fleetiq/web lint",
+    "web:typecheck": "pnpm --filter @fleetiq/web typecheck",
+    "web:test": "pnpm --filter @fleetiq/web test",
+    "web:build": "pnpm --filter @fleetiq/web build"
+  },
+  "devDependencies": {
+    "aws-cdk": "^2.1029.0"
+  }
+}
