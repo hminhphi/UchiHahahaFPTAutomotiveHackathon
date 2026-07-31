@@ -16,4 +16,4 @@ RUN sed -i 's/cu130/cpu/g' pyproject.toml && \
 COPY . .
 
 # Chạy script agent kết nối KUKSA mặc định
-CMD ["uv", "run", "python", "scripts/carsky_agent.py"]
+CMD [".venv/bin/python", "scripts/carsky_agent.py"]

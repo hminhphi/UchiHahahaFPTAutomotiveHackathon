@@ -143,39 +143,43 @@ def run_fusion_agent():
     frames = data.get("frames", [])
     
     logger.info(f"Connecting to KUKSA Broker at {KUKSA_HOST}:{KUKSA_PORT}...")
-    try:
-        with VSSClient(KUKSA_HOST, KUKSA_PORT) as client:
-            logger.info("Connected successfully! Starting dataset playback (Fusion Engine)...")
-            
-            try:
-                client.set_current_values({WARNING_SIGNAL: Datapoint("")})
-            except Exception: pass
-            
-            for index, frame in enumerate(frames):
-                # Truyền thêm 30 frame lịch sử để chạy TCN model
-                history = frames[max(0, index - 30):index]
-                # 1. Tính điểm an toàn
-                score = compute_trip_score(frame, history_frames=history)
-                speed = frame.get("ego", {}).get("speed_kmh", 0)
-                driver_state = frame.get("driver", {}).get("state", "unknown")
-                min_ttc = frame.get("min_ttc", 99.9)
+    while True:
+        try:
+            with VSSClient(KUKSA_HOST, KUKSA_PORT) as client:
+                logger.info("Connected successfully! Starting dataset playback (Fusion Engine)...")
                 
-                logger.info(f"Frame {index:04d} | Speed: {speed:.1f} | State: {driver_state} | TTC: {min_ttc:.1f}s -> SAFETY SCORE: {score:.1f}/100")
+                try:
+                    client.set_current_values({WARNING_SIGNAL: Datapoint("")})
+                except Exception: pass
                 
-                # 2. Phát cảnh báo nếu điểm an toàn rớt xuống thấp
-                if score < 50:
-                    try:
-                        client.set_current_values({WARNING_SIGNAL: Datapoint("COLLISION_WARNING")})
-                    except Exception: pass
-                else:
-                    try:
-                        client.set_current_values({WARNING_SIGNAL: Datapoint("")})
-                    except Exception: pass
+                for index, frame in enumerate(frames):
+                    # Truyền thêm 30 frame lịch sử để chạy TCN model
+                    history = frames[max(0, index - 30):index]
+                    # 1. Tính điểm an toàn
+                    score = compute_trip_score(frame, history_frames=history)
+                    speed = frame.get("ego", {}).get("speed_kmh", 0)
+                    driver_state = frame.get("driver", {}).get("state", "unknown")
+                    min_ttc = frame.get("min_ttc", 99.9)
                     
-                time.sleep(0.2) # Chạy mô phỏng ở 5 FPS
-                
-    except Exception as e:
-        logger.error(f"KUKSA Error: {e}")
+                    logger.info(f"Frame {index:04d} | Speed: {speed:.1f} | State: {driver_state} | TTC: {min_ttc:.1f}s -> SAFETY SCORE: {score:.1f}/100")
+                    
+                    # 2. Phát cảnh báo nếu điểm an toàn rớt xuống thấp
+                    if score < 50:
+                        try:
+                            client.set_current_values({WARNING_SIGNAL: Datapoint("COLLISION_WARNING")})
+                        except Exception: pass
+                    else:
+                        try:
+                            client.set_current_values({WARNING_SIGNAL: Datapoint("")})
+                        except Exception: pass
+                        
+                    time.sleep(0.2) # Chạy mô phỏng ở 5 FPS
+            
+            logger.info("Hoàn thành 1 vòng dataset. Tự động chạy lại (Looping)...")
+            time.sleep(2)
+        except Exception as e:
+            logger.error(f"KUKSA Error: {e}. Đang thử kết nối lại sau 5 giây...")
+            time.sleep(5)
 
 if __name__ == "__main__":
     run_fusion_agent()

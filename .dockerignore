@@ -1,7 +1,12 @@
 .git
 .venv
 .env
-data/
+data/*.zip
+data/**/*.zip
+data/**/image_2/
+data/**/image_3/
+data/**/depth/
+data/**/driver/
 notebooks/
 docs/
 __pycache__/
