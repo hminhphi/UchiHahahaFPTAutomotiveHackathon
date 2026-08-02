@@ -85,6 +85,6 @@ export function cameraSocketUrl(tripId: string, view: "road_left" | "road_right"
     configured ??
     (typeof window === "undefined"
       ? "ws://localhost:8000"
-      : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`);
+      : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.hostname}:8000`);
   return `${base.replace(/\/$/, "")}/ws/v1/trips/${encodeURIComponent(tripId)}/camera/${view}`;
 }

@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from fleetiq_api.dependencies import create_test_dependencies
 from fleetiq_api.main import create_app
 from fleetiq_api.schemas import AnalysisJob
+from fleetiq_api.ws.frame_protocol import CameraFrame, CameraFrameMetadata
 
 
 def test_trip_list_uses_stable_typed_envelope() -> None:
@@ -86,3 +87,30 @@ def test_job_route_rejects_naive_timestamp_from_repository() -> None:
 
     assert response.status_code == 500
     assert response.json()["error"]["code"] == "invalid_repository_data"
+
+
+def test_historical_frame_route_serves_an_exact_jpeg() -> None:
+    class FrameReader:
+        async def get_frame(self, trip_id, view, frame_index):
+            assert (trip_id, view, frame_index) == ("T01-Sample", "road_left", 42)
+            return CameraFrame(
+                metadata=CameraFrameMetadata(
+                    schema_version="1.0",
+                    frame_index=42,
+                    occurred_at=datetime.now().astimezone(),
+                    width=640,
+                    height=360,
+                    correlation_id="test.frame.000042",
+                ),
+                jpeg=b"test-jpeg",
+            )
+
+    dependencies = create_test_dependencies()
+    dependencies.frame_reader = FrameReader()
+    with TestClient(create_app(testing=True, dependencies=dependencies)) as client:
+        response = client.get("/api/v1/trips/T01-Sample/frames/road_left/42")
+
+    assert response.status_code == 200
+    assert response.content == b"test-jpeg"
+    assert response.headers["content-type"] == "image/jpeg"
+    assert response.headers["x-fleetiq-frame-index"] == "42"

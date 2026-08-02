@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from redis.exceptions import RedisError
 
-from .schemas import AnalysisJob, AnalysisJobCreate, TripSummary
+from .schemas import AnalysisJob, AnalysisJobCreate, TrajectoryData, TripSummary
 from .ws.frame_protocol import CameraFrame
 
 
@@ -29,6 +29,10 @@ class TripRepository(Protocol):
     async def list_trips(self) -> tuple[TripSummary, ...]: ...
 
 
+class TripTrajectoryRepository(Protocol):
+    async def get_trajectory(self, trip_id: str) -> TrajectoryData: ...
+
+
 class JobRepository(Protocol):
     async def create(
         self,
@@ -40,8 +44,42 @@ class JobRepository(Protocol):
     async def get(self, job_id: str) -> AnalysisJob | None: ...
 
 
+class CameraFrameSubscription(Protocol):
+    queue: asyncio.Queue[bytes]
+
+    async def close(self) -> None: ...
+
+
 class CameraFrameSink(Protocol):
-    async def publish(self, trip_id: str, view: str, frame: CameraFrame) -> None: ...
+    async def publish(
+        self,
+        trip_id: str,
+        view: str,
+        frame: CameraFrame,
+        packet: bytes | None = None,
+        exclude: asyncio.Queue[bytes] | None = None,
+    ) -> None: ...
+
+    async def subscribe(self, trip_id: str, view: str) -> CameraFrameSubscription: ...
+
+
+class CameraReplayLease(Protocol):
+    async def close(self) -> None: ...
+
+
+class CameraReplay(Protocol):
+    async def acquire(
+        self,
+        trip_id: str,
+        view: str,
+        sink: CameraFrameSink,
+    ) -> CameraReplayLease: ...
+
+
+class TripFrameReader(Protocol):
+    """Reads an exact immutable evidence frame from historical media."""
+
+    async def get_frame(self, trip_id: str, view: str, frame_index: int) -> CameraFrame: ...
 
 
 class LatestStateSubscription(Protocol):
@@ -247,6 +285,16 @@ class InMemoryTripRepository:
         return self.trips
 
 
+class InMemoryTripTrajectoryRepository:
+    async def get_trajectory(self, trip_id: str) -> TrajectoryData:
+        return TrajectoryData(
+            trip_id=trip_id,
+            distance_m=0,
+            max_speed_kmh=0,
+            max_lateral_accel_mps2=0,
+        )
+
+
 @dataclass
 class InMemoryJobRepository:
     jobs_by_id: dict[str, AnalysisJob] = field(default_factory=dict)
@@ -281,9 +329,84 @@ class InMemoryJobRepository:
 @dataclass
 class InMemoryCameraFrameSink:
     latest: dict[tuple[str, str], CameraFrame] = field(default_factory=dict)
+    _latest_packets: dict[tuple[str, str], bytes] = field(default_factory=dict)
+    _subscribers: dict[tuple[str, str], set[asyncio.Queue[bytes]]] = field(default_factory=dict)
 
-    async def publish(self, trip_id: str, view: str, frame: CameraFrame) -> None:
-        self.latest[(trip_id, view)] = frame
+    async def publish(
+        self,
+        trip_id: str,
+        view: str,
+        frame: CameraFrame | bytes,
+        packet: bytes | None = None,
+        exclude: asyncio.Queue[bytes] | None = None,
+    ) -> None:
+        if isinstance(frame, bytes):
+            packet = frame
+            from .ws.frame_protocol import decode_camera_frame
+
+            frame = decode_camera_frame(packet, 64 * 1024, 8 * 1024 * 1024)
+        if packet is None:
+            from .ws.frame_protocol import encode_camera_frame
+
+            packet = encode_camera_frame(frame)
+        key = (trip_id, view)
+        self.latest[key] = frame
+        self._latest_packets[key] = packet
+        for queue in tuple(self._subscribers.get(key, ())):
+            if queue is exclude:
+                continue
+            if queue.full():
+                queue.get_nowait()
+            queue.put_nowait(packet)
+
+    async def subscribe(self, trip_id: str, view: str) -> InMemoryCameraFrameSubscription:
+        key = (trip_id, view)
+        queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=1)
+        self._subscribers.setdefault(key, set()).add(queue)
+        return InMemoryCameraFrameSubscription(self, key, queue)
+
+    def unsubscribe(self, key: tuple[str, str], queue: asyncio.Queue[bytes]) -> None:
+        subscribers = self._subscribers.get(key)
+        if subscribers is None:
+            return
+        subscribers.discard(queue)
+        if not subscribers:
+            self._subscribers.pop(key, None)
+
+
+class InMemoryCameraFrameSubscription:
+    def __init__(
+        self,
+        sink: InMemoryCameraFrameSink,
+        key: tuple[str, str],
+        queue: asyncio.Queue[bytes],
+    ) -> None:
+        self._sink = sink
+        self._key = key
+        self.queue = queue
+        self.closed = False
+
+    async def close(self) -> None:
+        if not self.closed:
+            self._sink.unsubscribe(self._key, self.queue)
+            self.closed = True
+
+
+class DisabledCameraReplayLease:
+    async def close(self) -> None:
+        return None
+
+
+class DisabledCameraReplay:
+    """Keeps test and producer-only deployments free from background replay."""
+
+    async def acquire(
+        self,
+        trip_id: str,
+        view: str,
+        sink: CameraFrameSink,
+    ) -> DisabledCameraReplayLease:
+        return DisabledCameraReplayLease()
 
 
 class InMemoryLatestStateSubscription:
@@ -340,9 +463,12 @@ class AppDependencies:
     redis: LifecycleResource
     database: LifecycleResource
     trips: TripRepository
+    trajectory: TripTrajectoryRepository
     jobs: JobRepository
     camera_sink: CameraFrameSink
+    camera_replay: CameraReplay
     live_state: LatestStateBroker
+    frame_reader: TripFrameReader | None = None
 
 
 def create_test_dependencies() -> AppDependencies:
@@ -350,9 +476,12 @@ def create_test_dependencies() -> AppDependencies:
         redis=InMemoryHealthResource(),
         database=InMemoryHealthResource(),
         trips=InMemoryTripRepository(),
+        trajectory=InMemoryTripTrajectoryRepository(),
         jobs=InMemoryJobRepository(),
         camera_sink=InMemoryCameraFrameSink(),
+        camera_replay=DisabledCameraReplay(),
         live_state=InMemoryLatestStateBroker(),
+        frame_reader=None,
     )
 
 
@@ -375,7 +504,10 @@ def create_external_dependencies(
         redis=redis_repository,
         database=ConfiguredExternalResource("database", database_url),
         trips=InMemoryTripRepository(),
+        trajectory=InMemoryTripTrajectoryRepository(),
         jobs=redis_repository,
         camera_sink=InMemoryCameraFrameSink(),
+        camera_replay=DisabledCameraReplay(),
         live_state=InMemoryLatestStateBroker(),
+        frame_reader=None,
     )

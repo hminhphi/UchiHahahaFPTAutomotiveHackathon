@@ -1,4 +1,5 @@
-interface TimelineEvent {
+export interface TimelineEvent {
+  frameIndex?: number;
   time: string;
   label: string;
   detail: string;
@@ -13,7 +14,7 @@ export function RiskTimeline({ events }: { events: TimelineEvent[] }) {
         <h2>Risk timeline</h2>
       </div>
       <div className="timeline-track">
-        {events.map((event) => (
+        {events.length ? events.map((event) => (
           <article className="timeline-event" key={`${event.time}-${event.label}`}>
             <span className={`event-dot severity-${event.severity}`} />
             <time>{event.time}</time>
@@ -22,7 +23,7 @@ export function RiskTimeline({ events }: { events: TimelineEvent[] }) {
               <p>{event.detail}</p>
             </div>
           </article>
-        ))}
+        )) : <p className="empty-evidence">No frame-level evidence was produced for this trip.</p>}
       </div>
     </section>
   );

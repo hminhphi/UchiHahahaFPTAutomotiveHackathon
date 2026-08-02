@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 
 def test_production_settings_require_external_resource_urls() -> None:
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match="FLEETIQ_TESTING=true"):
         ApiSettings(testing=False, allowed_origins=("https://fleet.example",))
 
 
@@ -37,6 +37,15 @@ def test_environment_parser_rejects_invalid_integer() -> None:
                 "FLEETIQ_ALLOWED_ORIGINS": "http://localhost:3000",
                 "FLEETIQ_MAX_FRAME_BYTES": "many",
             }
+        )
+
+
+def test_s3_media_requires_endpoint_and_credentials() -> None:
+    with pytest.raises(ValidationError, match="S3 media backend"):
+        ApiSettings(
+            testing=True,
+            allowed_origins=("http://localhost:3000",),
+            media_backend="s3",
         )
 
 

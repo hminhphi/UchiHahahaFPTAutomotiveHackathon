@@ -126,11 +126,55 @@ def camera_websocket() -> None:
         separators=(",", ":"),
     ).encode()
     packet = struct.pack(">I", len(metadata)) + metadata + b"\xff\xd8\xff\xd9"
-    with connect(f"{WS_URL}/ws/v1/trips/T01-Sample/camera/road_left") as socket:
-        socket.send(packet)
-        response = json.loads(socket.recv(timeout=5))
+    view = "smoke_input"
+    with (
+        connect(f"{WS_URL}/ws/v1/trips/T01-Sample/camera/{view}") as viewer,
+        connect(f"{WS_URL}/ws/v1/trips/T01-Sample/camera/{view}?role=producer") as producer,
+    ):
+        producer.send(packet)
+        response = json.loads(producer.recv(timeout=5))
+        received = viewer.recv(timeout=5)
     if response["status"] != "accepted" or response["frame_index"] != 1:
         raise RuntimeError("camera WebSocket failed")
+    if received != packet:
+        raise RuntimeError("camera viewer did not receive the producer frame")
+
+
+def historical_replay() -> None:
+    with connect(f"{WS_URL}/ws/v1/trips/T01-Sample/camera/road_left") as viewer:
+        frames = [_packet_frame_index(viewer.recv(timeout=5)) for _ in range(3)]
+    if frames != sorted(frames) or len(set(frames)) != len(frames):
+        raise RuntimeError(f"historical camera replay was not strictly ordered: {frames}")
+
+
+def trip_trajectory() -> None:
+    fleet_status, fleet_payload = http_json(f"{API_URL}/api/v1/trips")
+    status, payload = http_json(f"{API_URL}/api/v1/trips/T01-Sample/trajectory")
+    try:
+        summaries = fleet_payload["data"]["items"]
+        summary = next(item for item in summaries if item["trip_id"] == "T01-Sample")
+        points = payload["data"]["points"]
+        first = points[0]
+    except (IndexError, KeyError, StopIteration, TypeError) as error:
+        raise RuntimeError("fleet or trajectory payload was incomplete") from error
+    if fleet_status != 200 or not isinstance(summary.get("safety_score"), int):
+        raise RuntimeError("fleet summary did not expose the documented aggregate score")
+    if status != 200 or len(points) != 600:
+        raise RuntimeError("trajectory did not include all organizer telemetry frames")
+    required = {"frame_index", "speed_kmh", "driver_state", "active_event_types"}
+    if not required.issubset(first):
+        raise RuntimeError("trajectory did not expose frame-synchronised telemetry")
+
+
+def _packet_frame_index(packet: object) -> int:
+    if not isinstance(packet, bytes) or len(packet) < 4:
+        raise RuntimeError("historical replay packet was not binary")
+    metadata_length = struct.unpack(">I", packet[:4])[0]
+    try:
+        metadata = json.loads(packet[4 : 4 + metadata_length])
+        return int(metadata["frame_index"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise RuntimeError("historical replay metadata was invalid") from error
 
 
 def carsky_acknowledgement() -> None:
@@ -160,16 +204,20 @@ def carsky_acknowledgement() -> None:
 
 def main() -> None:
     wait_ready()
-    print("1/6 API readiness: ok")
+    print("1/8 API readiness: ok")
     mqtt_round_trip()
-    print("2/6 telemetry publish: ok")
+    print("2/8 telemetry publish: ok")
     model_inference()
-    print("3/6 local inference: ok")
-    print("4/6 risk event receive: ok")
+    print("3/8 local inference: ok")
+    print("4/8 risk event receive: ok")
     camera_websocket()
-    print("5/6 camera WebSocket: ok")
+    print("5/8 producer camera WebSocket: ok")
+    historical_replay()
+    print("6/8 historical camera replay: ok")
+    trip_trajectory()
+    print("7/8 fleet and trajectory telemetry: ok")
     carsky_acknowledgement()
-    print("6/6 mock CarSky acknowledgement: ok")
+    print("8/8 mock CarSky acknowledgement: ok")
 
 
 if __name__ == "__main__":

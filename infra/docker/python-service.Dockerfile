@@ -1,6 +1,7 @@
 # Generic build template for a Python workspace package.
 # Build with --build-arg PACKAGE=<uv-package> --build-arg ENTRYPOINT=<console-script>.
-FROM ghcr.io/astral-sh/uv:0.11.11-python3.12-bookworm-slim AS builder
+FROM python:3.12-slim-bookworm AS builder
+COPY --from=ghcr.io/astral-sh/uv:0.11.11 /uv /uvx /bin/
 
 ARG PACKAGE
 WORKDIR /workspace

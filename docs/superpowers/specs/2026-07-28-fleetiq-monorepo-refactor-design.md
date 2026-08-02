@@ -486,6 +486,7 @@ The refactor is complete when:
 
 ## 13. Reference Guidance
 
+ 
 The design follows the official guidance for:
 
 - uv workspaces with a shared lockfile and per-member `pyproject.toml`.

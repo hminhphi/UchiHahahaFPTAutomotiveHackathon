@@ -39,6 +39,11 @@ class HealthEnvelope(ApiEnvelope):
 class TripSummary(ContractModel):
     trip_id: str
     status: Literal["available", "processing", "complete", "failed"] = "available"
+    safety_score: int | None = Field(default=None, ge=0, le=100)
+    severity: int | None = Field(default=None, ge=1, le=5)
+    latest_alert: str | None = Field(default=None, max_length=160)
+    driver_state: str | None = Field(default=None, max_length=64)
+    max_speed_kmh: float | None = Field(default=None, ge=0, le=300)
 
     @field_validator("trip_id")
     @classmethod
@@ -53,6 +58,35 @@ class TripListData(ContractModel):
 class TripListEnvelope(ApiEnvelope):
     status: Literal["ok"] = "ok"
     data: TripListData
+
+
+class TrajectoryPoint(ContractModel):
+    frame_index: int = Field(ge=0)
+    timestamp_s: float = Field(ge=0)
+    x_m: float
+    y_m: float
+    speed_kmh: float = Field(ge=0, le=300)
+    longitudinal_accel_mps2: float = Field(ge=-12, le=12)
+    lateral_accel_mps2: float = Field(ge=-12, le=12)
+    min_ttc_s: float | None = Field(default=None, ge=0)
+    headway_s: float | None = Field(default=None, ge=0)
+    driver_state: str = Field(default="unknown", max_length=64)
+    driver_alertness: float | None = Field(default=None, ge=0, le=1)
+    simulator_risk_score: float | None = Field(default=None, ge=0, le=100)
+    active_event_types: tuple[str, ...] = ()
+    events: tuple[str, ...] = ()
+
+
+class TrajectoryData(ContractModel):
+    trip_id: str
+    points: tuple[TrajectoryPoint, ...] = ()
+    distance_m: float = Field(ge=0)
+    max_speed_kmh: float = Field(ge=0)
+    max_lateral_accel_mps2: float = Field(ge=0)
+
+
+class TrajectoryEnvelope(ApiEnvelope):
+    data: TrajectoryData
 
 
 class AnalysisJobCreate(ContractModel):

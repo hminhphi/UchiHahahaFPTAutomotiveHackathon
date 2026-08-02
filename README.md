@@ -33,7 +33,7 @@ as core engines underneath the product.
 | --- | --- |
 | Road-facing perception | Objects, lane/road mask, lane offset, depth, distance, tracking, TTC |
 | Driver monitoring | Driver state events for attention, drowsiness, and distraction workflows |
-| Telemetry analytics | Speeding, harsh brake, fast corner, acceleration, route trajectory |
+| Telemetry analytics | Speeding, harsh brake, fast corner, acceleration, route trajectory coloured from blue (0 km/h) to red (100 km/h) |
 | Fusion and scoring | Unified risk events, trip score, explanations, coaching recommendations |
 | Fleet dashboard | Driver ranking, trip drill-down, timelines, evidence viewer, report panel |
 | CarSky HMI | Android Automotive coaching acknowledgement path for IVI demo |
@@ -113,8 +113,7 @@ uv run --package fleetiq-training-roadface python -m fleetiq_training_roadface.c
 Start the API:
 
 ```powershell
-$env:FLEETIQ_TESTING = "true"
-uv run --package fleetiq-api uvicorn fleetiq_api.main:create_app --factory --host 0.0.0.0 --port 8000
+$env:FLEETIQ_TESTING = "true"; uv run --package fleetiq-api uvicorn fleetiq_api.main:create_app --factory --host 0.0.0.0 --port 8000
 ```
 
 Start the web app in another terminal:
@@ -131,6 +130,17 @@ Open:
 The dashboard has fixture fallback data, so the product walkthrough still works
 before live perception output is available.
 
+To run a local historical replay without Docker/MinIO, enable the filesystem
+backend explicitly in the API terminal:
+
+```powershell
+$env:FLEETIQ_TESTING = "true"
+$env:FLEETIQ_REPLAY_ENABLED = "true"
+$env:FLEETIQ_MEDIA_BACKEND = "filesystem"
+$env:FLEETIQ_DATASET_ROOT = "data/Practice_Dataset/Practice_Dataset"
+uv run --package fleetiq-api uvicorn fleetiq_api.main:create_app --factory --host 0.0.0.0 --port 8000
+```
+
 ### 2. Run The Full Local Stack
 
 Start Docker Desktop, then run:
@@ -140,14 +150,26 @@ Copy-Item .env.example .env
 docker compose --profile full up --build
 ```
 
+If port `3000` is already in use, set `FLEETIQ_WEB_PORT=3001` in `.env` and
+open <http://localhost:3001> instead.
+
 Run the protocol smoke test in another terminal:
 
 ```powershell
 uv run --group dev python infra/compose/smoke_test.py
 ```
 
-Expected result: `6/6` covering API readiness, telemetry MQTT, model mock,
-risk MQTT, binary camera WebSocket framing, and CarSky acknowledgement.
+Expected result: `8/8` covering API readiness, telemetry MQTT, model mock,
+risk MQTT, producer camera WebSocket framing, ordered historical replay,
+fleet/trajectory telemetry, and CarSky acknowledgement.
+
+The first start mirrors the local Practice Dataset into MinIO and can take a
+few minutes. Once `minio-seed` reports success, open
+`http://localhost:3000/trips/T01-Sample`: the road-facing video replays from
+the `fleetiq-demo` bucket instead of a one-frame fixture. MinIO is available at
+`http://localhost:9001`; production uses the same S3-compatible interface with
+an AWS S3 bucket. The Trip Detail route moves its `NOW` vehicle marker and all
+telemetry cards from the binary replay frame index, not from a separate timer.
 
 Stop the stack:
 
@@ -252,12 +274,14 @@ Run the main quality gates before pushing shared work:
 
 ```powershell
 uv lock --check
+uv run ruff check apps packages services ml infra tools
 uv run python -m pytest -v
 pnpm --filter @fleetiq/web lint
 pnpm --filter @fleetiq/web typecheck
 pnpm --filter @fleetiq/web test
 pnpm --filter @fleetiq/web build
 docker compose --profile full config
+uv run --group dev python infra/compose/smoke_test.py
 ```
 
 > [!IMPORTANT]
@@ -305,8 +329,10 @@ runbook](docs/runbooks/carsky-deploy.md).
 - [Architecture](docs/architecture/README.md)
 - [Protocols](docs/protocols/README.md)
 - [Runbooks](docs/runbooks/README.md)
+- [CI validation](docs/runbooks/ci-validation.md)
 - [Proposal assets](docs/proposal/README.md)
 - [Dataset signal audit](docs/DATASET_SIGNAL_AUDIT.md)
+- [Demo guide and E2E acceptance](docs/demo/README.md)
 - [Road-facing training](ml/training/roadface/README.md)
 - [Visualization tools](tools/visualization/README.md)
 

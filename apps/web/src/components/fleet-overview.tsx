@@ -6,6 +6,7 @@ const statusCopy = {
   live: "Models live",
   mock: "Fixture data",
   degraded: "Model degraded",
+  reference: "Organizer telemetry",
 } as const;
 
 export function FleetOverview({ trips }: { trips: FleetTrip[] }) {

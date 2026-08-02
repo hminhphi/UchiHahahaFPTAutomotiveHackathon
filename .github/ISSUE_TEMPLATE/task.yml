@@ -1,0 +1,38 @@
+name: FleetIQ task
+description: A bounded, owned hackathon delivery task
+title: "[Task]: "
+labels: [task]
+body:
+  - type: markdown
+    attributes:
+      value: "Each task needs one owner, an estimate of two to eight hours, and a testable output."
+  - type: input
+    id: owner
+    attributes:
+      label: Owner GitHub handle
+      placeholder: "@four2k3"
+    validations:
+      required: true
+  - type: input
+    id: estimate
+    attributes:
+      label: Estimate
+      placeholder: "4h"
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome and acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and risks
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation command or evidence
+    validations:
+      required: true

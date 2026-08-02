@@ -59,6 +59,46 @@ services:
       timeout: 4s
       retries: 10
       start_period: 5s
+    networks: [edge, backend]
+
+  minio:
+    <<: *service-defaults
+    image: minio/minio:latest
+    profiles: [core, perception, full]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${FLEETIQ_OBJECT_STORAGE_ACCESS_KEY:-fleetiq-local}
+      MINIO_ROOT_PASSWORD: ${FLEETIQ_OBJECT_STORAGE_SECRET_KEY:-fleetiq-local-secret}
+    ports:
+      - "${FLEETIQ_MINIO_PORT:-9000}:9000"
+      - "${FLEETIQ_MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: [CMD, curl, -f, http://127.0.0.1:9000/minio/health/live]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [edge, backend]
+
+  minio-seed:
+    image: minio/mc:latest
+    profiles: [core, perception, full]
+    restart: "no"
+    environment:
+      FLEETIQ_OBJECT_STORAGE_ACCESS_KEY: ${FLEETIQ_OBJECT_STORAGE_ACCESS_KEY:-fleetiq-local}
+      FLEETIQ_OBJECT_STORAGE_SECRET_KEY: ${FLEETIQ_OBJECT_STORAGE_SECRET_KEY:-fleetiq-local-secret}
+      FLEETIQ_OBJECT_STORAGE_BUCKET: ${FLEETIQ_OBJECT_STORAGE_BUCKET:-fleetiq-demo}
+    volumes:
+      - type: bind
+        source: ./data
+        target: /seed
+        read_only: true
+      - ./infra/compose/minio/seed.sh:/seed.sh:ro
+    entrypoint: ["/bin/sh", "/seed.sh"]
+    depends_on:
+      minio:
+        condition: service_healthy
     networks: [backend]
 
   api:
@@ -72,6 +112,13 @@ services:
       FLEETIQ_ALLOWED_ORIGINS: ${FLEETIQ_ALLOWED_ORIGINS:-http://localhost:3000}
       FLEETIQ_REDIS_URL: redis://redis:6379/0
       FLEETIQ_DATABASE_URL: postgresql://${POSTGRES_USER:-fleetiq}:${POSTGRES_PASSWORD:-fleetiq-local-only}@postgres:5432/${POSTGRES_DB:-fleetiq}
+      FLEETIQ_REPLAY_ENABLED: "true"
+      FLEETIQ_REPLAY_FPS: ${FLEETIQ_REPLAY_FPS:-10}
+      FLEETIQ_MEDIA_BACKEND: s3
+      FLEETIQ_OBJECT_STORAGE_ENDPOINT: http://minio:9000
+      FLEETIQ_OBJECT_STORAGE_BUCKET: ${FLEETIQ_OBJECT_STORAGE_BUCKET:-fleetiq-demo}
+      FLEETIQ_OBJECT_STORAGE_ACCESS_KEY: ${FLEETIQ_OBJECT_STORAGE_ACCESS_KEY:-fleetiq-local}
+      FLEETIQ_OBJECT_STORAGE_SECRET_KEY: ${FLEETIQ_OBJECT_STORAGE_SECRET_KEY:-fleetiq-local-secret}
     ports:
       - "${FLEETIQ_API_PORT:-8000}:8000"
     volumes:
@@ -89,6 +136,8 @@ services:
         condition: service_healthy
       mosquitto:
         condition: service_healthy
+      minio-seed:
+        condition: service_completed_successfully
     networks: [edge, backend]
 
   web:
@@ -176,3 +225,4 @@ volumes:
   postgres-data:
   redis-data:
   mosquitto-data:
+  minio-data:

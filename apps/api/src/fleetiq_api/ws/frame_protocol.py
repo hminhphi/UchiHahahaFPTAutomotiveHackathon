@@ -66,3 +66,9 @@ def decode_camera_frame(
     if len(jpeg) < 4 or not jpeg.startswith(b"\xff\xd8") or not jpeg.endswith(b"\xff\xd9"):
         raise FrameProtocolError("payload is not a JPEG frame", 1003)
     return CameraFrame(metadata=metadata, jpeg=jpeg)
+
+
+def encode_camera_frame(frame: CameraFrame) -> bytes:
+    """Encode ``u32be metadata length | JSON metadata | JPEG`` for viewers."""
+    metadata = frame.metadata.model_dump_json().encode("utf-8")
+    return len(metadata).to_bytes(4, "big", signed=False) + metadata + frame.jpeg

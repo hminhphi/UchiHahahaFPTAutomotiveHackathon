@@ -24,5 +24,7 @@ For a local Android SDK, run `gradle testDebugUnitTest assembleDebug` from this
 folder. Set `-PFLEETIQ_BRIDGE_URL=http://<bridge-host>:8090` when the CarSky room
 does not resolve the emulator default `10.0.2.2`.
 
-The local workstation currently has no Android SDK/Gradle installation, and its
-Docker daemon must be running before either build path can be verified.
+The Docker builder is the supported validation path and compiles the Kotlin
+unit tests plus `assembleDebug`; it has been verified to produce the debug APK.
+It does not deploy the APK to a CarSky Room. That organizer-authenticated step
+remains documented in [the CarSky runbook](../../docs/runbooks/carsky-deploy.md).

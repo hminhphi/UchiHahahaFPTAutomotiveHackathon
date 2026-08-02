@@ -23,6 +23,7 @@ from .dependencies import (
     create_external_dependencies,
     create_test_dependencies,
 )
+from .historical_replay import create_historical_dependencies
 from .errors import ApiError
 from .routes import health, jobs, trips, websocket
 from .schemas import ErrorDetail, ErrorEnvelope, utc_now
@@ -74,6 +75,14 @@ def create_app(
             assert selected.redis_url is not None
             assert selected.database_url is not None
             dependencies = create_external_dependencies(selected.redis_url, selected.database_url)
+
+    if selected.replay_enabled:
+        (
+            dependencies.trips,
+            dependencies.camera_replay,
+            dependencies.trajectory,
+            dependencies.frame_reader,
+        ) = create_historical_dependencies(selected)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:

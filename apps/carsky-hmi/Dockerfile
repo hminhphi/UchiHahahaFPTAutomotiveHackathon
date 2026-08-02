@@ -22,9 +22,8 @@ RUN yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev
       "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
 WORKDIR /workspace
-COPY settings.gradle.kts build.gradle.kts ./
+COPY settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY app/build.gradle.kts app/build.gradle.kts
-RUN gradle --no-daemon :app:dependencies
 
 COPY app app
 RUN gradle --no-daemon testDebugUnitTest assembleDebug

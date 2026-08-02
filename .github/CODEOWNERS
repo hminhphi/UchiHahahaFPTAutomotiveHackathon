@@ -1,0 +1,16 @@
+# FleetIQ Guardian ownership map
+
+* @hminhphi
+
+/apps/web/ @four2k3
+/apps/carsky-hmi/ @four2k3
+/apps/api/ @VKUNeMo
+/services/event-gateway/ @VKUNeMo
+/services/fusion-worker/ @VKUNeMo
+/services/dms-worker/ @hoangtrung1801
+/services/roadface-worker/ @babynghe2003
+/ml/training/roadface/ @babynghe2003
+/packages/model-clients/ @khaphan11
+/packages/data-kit/ @khaphan11
+/infra/ @hminhphi
+/docs/ @hminhphi

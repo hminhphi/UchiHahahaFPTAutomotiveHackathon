@@ -638,6 +638,7 @@ dependencies = [
     { name = "fleetiq-observability" },
     { name = "redis" },
     { name = "uvicorn" },
+    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
@@ -652,6 +653,7 @@ requires-dist = [
     { name = "fleetiq-observability", editable = "packages/observability" },
     { name = "redis", specifier = ">=6,<7" },
     { name = "uvicorn", specifier = ">=0.35,<1" },
+    { name = "websockets", specifier = ">=15,<16" },
 ]
 
 [package.metadata.requires-dev]

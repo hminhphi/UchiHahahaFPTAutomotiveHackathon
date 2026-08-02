@@ -1,0 +1,40 @@
+name: Verify FleetIQ
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python CPU contracts and services
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install OpenCV runtime libraries
+        run: sudo apt-get update && sudo apt-get install --yes libgl1 libglib2.0-0 libxcb1 libxext6 libxrender1
+      - run: uv sync --all-packages --group dev
+      - run: uv run ruff check apps packages services ml infra tools
+      - run: uv run pytest -q
+
+  web:
+    name: Dashboard checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fleetiq/web lint
+      - run: pnpm --filter @fleetiq/web test
+      - run: pnpm --filter @fleetiq/web build

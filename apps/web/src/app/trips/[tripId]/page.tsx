@@ -1,8 +1,9 @@
 import Link from "next/link";
 
 import { RiskTimeline } from "@/components/risk-timeline";
-import { TripLiveView } from "@/components/trip-live-view";
-import { getFleetTrips, getTrip } from "@/lib/api";
+import { TripReplayPanel } from "@/components/trip-replay-panel";
+import { getFleetTrips, getTrip, getTripTrajectory } from "@/lib/api";
+import { buildTripEvidence, buildTripScoreSignals } from "@/lib/trip-evidence";
 
 export const dynamic = "force-dynamic";
 
@@ -12,87 +13,48 @@ export default async function TripPage({
   params: Promise<{ tripId: string }>;
 }) {
   const { tripId } = await params;
-  const trip = getTrip(decodeURIComponent(tripId), await getFleetTrips());
-  const events = [
-    {
-      time: "00:18.4",
-      label: "TTC entered critical range",
-      detail: `${trip.ttcS?.toFixed(1) ?? "--"} seconds / lead object continuity 0.91`,
-      severity: 5,
-    },
-    {
-      time: "00:17.9",
-      label: "Driver attention dropped",
-      detail: `${trip.driverState} / DMS confidence 0.88`,
-      severity: 4,
-    },
-    {
-      time: "00:16.2",
-      label: "Closing speed increased",
-      detail: "Relative speed 8.1 m/s / temporal depth stable",
-      severity: 3,
-    },
-  ];
+  const decodedTripId = decodeURIComponent(tripId);
+  const [fleetTrips, trajectory] = await Promise.all([getFleetTrips(), getTripTrajectory(decodedTripId)]);
+  const trip = getTrip(decodedTripId, fleetTrips);
+  const events = buildTripEvidence(trajectory);
+  const scoreSignals = buildTripScoreSignals(trajectory);
 
   return (
-    <main>
-      <Link className="back-link" href="/">
-        &lt;- Fleet overview
-      </Link>
-      <section className="trip-header">
+    <main className="trip-console">
+      <div className="report-heading">
         <div>
-          <span className="eyebrow">{trip.vehicleId} / synchronized replay</span>
-          <h1>{trip.tripId}</h1>
-          <p>{trip.latestAlert}</p>
+          <Link className="back-link" href="/">Fleet overview</Link>
+          <h1>Trip report <span>/ {trip.tripId}</span></h1>
+          <p>Completed trip replay with auditable road risk, vehicle state, and coaching evidence.</p>
         </div>
-        <div className={`risk-stamp severity-${trip.severity}`}>
-          <span>Risk severity</span>
-          <strong>{trip.severity}/5</strong>
-          <small>Safety score {trip.score}</small>
-        </div>
+        <div className={`risk-stamp severity-${trip.severity}`}><span>Current risk</span><strong>{trip.severity}/5</strong><small>Safety score {trip.score}</small></div>
+      </div>
+
+      <section className="trip-facts panel">
+        <div><span>Trip ID</span><strong>{trip.tripId}</strong></div>
+        <div><span>Driver</span><strong>{trip.driverName}</strong></div>
+        <div><span>Vehicle</span><strong>{trip.vehicleId}</strong></div>
+        <div><span>Source</span><strong>Practice dataset</strong></div>
+        <div><span>Playback</span><strong>Historical / 10 FPS</strong></div>
       </section>
 
-      <div className="trip-layout">
-        <div>
-          <TripLiveView tripId={trip.tripId} />
-          <RiskTimeline events={events} />
-        </div>
-        <aside>
-          <section className="panel evidence-panel">
-            <span className="eyebrow">Current fused state</span>
-            <dl>
-              <div>
-                <dt>TTC</dt>
-                <dd>{trip.ttcS?.toFixed(1) ?? "--"} s</dd>
-              </div>
-              <div>
-                <dt>Speed</dt>
-                <dd>{Math.round(trip.speedMps * 3.6)} km/h</dd>
-              </div>
-              <div>
-                <dt>Driver</dt>
-                <dd>{trip.driverState}</dd>
-              </div>
-              <div>
-                <dt>Model state</dt>
-                <dd>{trip.modelStatus}</dd>
-              </div>
-            </dl>
-          </section>
-          <section className="panel coaching-panel">
-            <span className="eyebrow">Assigned coaching</span>
-            <h2>Increase following distance</h2>
-            <p>
-              Review the compound event where attention dropped while closing speed
-              increased.
-            </p>
-            <div className="coach-meta">
-              <span>Channel / Post-trip</span>
-              <span>Evidence / 3 frames</span>
-            </div>
-          </section>
-        </aside>
-      </div>
+      <section className="report-grid">
+        <article className="panel score-panel">
+          <span className="eyebrow">Safety score</span>
+          <div className="score-content"><div className="score-ring" style={{ background: `conic-gradient(var(--blue) 0 ${trip.score}%, var(--orange) ${trip.score}% ${Math.min(100, trip.score + 8)}%, #e5eaf2 ${Math.min(100, trip.score + 8)}% 100%)` }}><strong>{trip.score}</strong><span>/100</span></div><div><h2>Auditable score signals</h2>{scoreSignals.map((signal) => <ScoreBar key={signal.label} {...signal} />)}</div></div>
+        </article>
+        <article className="panel deductions-panel">
+          <div className="panel-heading"><div><span className="eyebrow">Evidence queue</span><h2>Auditable deductions</h2></div><span className="count-badge">{events.length.toString().padStart(2, "0")} events</span></div>
+          {events.length ? events.map((event) => <div className="deduction-row" key={`${event.label}-${event.frameIndex}`}><span className={`event-dot severity-${event.severity}`} /><div><strong>{event.label}</strong><small>{event.detail}</small></div><time>{event.time}</time><b>Frame {event.frameIndex}</b></div>) : <p className="empty-evidence">No scored risk evidence is available for this trip.</p>}
+        </article>
+      </section>
+
+      <RiskTimeline events={events} />
+      <TripReplayPanel tripId={trip.tripId} trajectory={trajectory} evidence={events} />
     </main>
   );
+}
+
+function ScoreBar({ label, value, note }: { label: string; value: number | null; note: string }) {
+  return <div className="score-bar"><span title={note}>{label}</span><b>{value === null ? "N/A" : `${value}%`}</b><i><em style={{ width: `${value ?? 0}%` }} /></i></div>;
 }

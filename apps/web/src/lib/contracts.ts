@@ -1,5 +1,5 @@
 export type DriverState = "attentive" | "distracted" | "drowsy" | "unknown";
-export type ModelStatus = "live" | "mock" | "degraded";
+export type ModelStatus = "live" | "mock" | "degraded" | "reference";
 
 export interface FleetTrip {
   tripId: string;
@@ -26,4 +26,29 @@ export interface CameraFrameMetadata {
 export interface DecodedCameraFrame {
   metadata: CameraFrameMetadata;
   jpeg: Uint8Array;
+}
+
+export interface TrajectoryPoint {
+  frameIndex: number;
+  timestampS: number;
+  xM: number;
+  yM: number;
+  speedKmh: number;
+  longitudinalAccelMps2: number;
+  lateralAccelMps2: number;
+  minTtcS: number | null;
+  headwayS: number | null;
+  driverState: string;
+  driverAlertness: number | null;
+  simulatorRiskScore: number | null;
+  activeEventTypes: string[];
+  events: string[];
+}
+
+export interface TripTrajectory {
+  tripId: string;
+  points: TrajectoryPoint[];
+  distanceM: number;
+  maxSpeedKmh: number;
+  maxLateralAccelMps2: number;
 }

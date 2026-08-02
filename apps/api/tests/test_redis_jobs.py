@@ -6,11 +6,13 @@ import pytest
 from fastapi.testclient import TestClient
 from fleetiq_api.dependencies import (
     AppDependencies,
+    DisabledCameraReplay,
     IdempotencyConflictError,
     InMemoryCameraFrameSink,
     InMemoryHealthResource,
     InMemoryLatestStateBroker,
     InMemoryTripRepository,
+    InMemoryTripTrajectoryRepository,
     JobRepositoryUnavailableError,
     RedisJobRepository,
     create_external_dependencies,
@@ -160,8 +162,10 @@ def test_lifespan_closes_redis_client() -> None:
         redis=repository,
         database=InMemoryHealthResource(),
         trips=InMemoryTripRepository(),
+        trajectory=InMemoryTripTrajectoryRepository(),
         jobs=repository,
         camera_sink=InMemoryCameraFrameSink(),
+        camera_replay=DisabledCameraReplay(),
         live_state=InMemoryLatestStateBroker(),
     )
 
@@ -178,8 +182,10 @@ def test_job_route_maps_redis_failure_to_stable_503() -> None:
         redis=repository,
         database=InMemoryHealthResource(),
         trips=InMemoryTripRepository(),
+        trajectory=InMemoryTripTrajectoryRepository(),
         jobs=repository,
         camera_sink=InMemoryCameraFrameSink(),
+        camera_replay=DisabledCameraReplay(),
         live_state=InMemoryLatestStateBroker(),
     )
 
