@@ -40,13 +40,14 @@ export function TripVideoPlayer({
 }: TripVideoPlayerProps) {
   const playerRef = useRef<HTMLElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [cameraView, setCameraView] = useState<"road_left" | "driver">("road_left");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [frameStatus, setFrameStatus] = useState<"loading" | "ready" | "error">("loading");
   const currentFrame = nearestFrameIndex(frameIndexes, selectedFrameIndex ?? frameIndexes[0] ?? 0);
   const currentPosition = currentFrame === null ? 0 : framePosition(frameIndexes, currentFrame);
   const imageUrl = currentFrame === null
     ? null
-    : `/api/trips/${encodeURIComponent(tripId)}/frames/road_left/${currentFrame}`;
+    : `/api/trips/${encodeURIComponent(tripId)}/frames/${cameraView}/${currentFrame}`;
 
   useEffect(() => {
     const onFullscreenChange = () => setIsFullscreen(document.fullscreenElement === playerRef.current);
@@ -91,17 +92,17 @@ export function TripVideoPlayer({
   }
 
   return (
-    <section className="trip-video-player" ref={playerRef} aria-label="Historical road-facing video player">
+    <section className="trip-video-player" ref={playerRef} aria-label="Historical camera video player">
       <div className="live-view">
         {imageUrl ? (
           // Exact historical frames are intentionally served from the same-origin Next proxy.
           // eslint-disable-next-line @next/next/no-img-element
-          <img alt={`Road-facing camera frame ${currentFrame}`} src={imageUrl} onLoad={() => setFrameStatus("ready")} onError={() => setFrameStatus("error")} />
+          <img alt={`${cameraView === "driver" ? "Driver" : "Road-facing"} camera frame ${currentFrame}`} src={imageUrl} onLoad={() => setFrameStatus("ready")} onError={() => setFrameStatus("error")} />
         ) : (
           <div className="camera-placeholder"><div className="road-grid" /><strong>No historical frames</strong><span>This trip has no road-facing camera evidence.</span></div>
         )}
         <div className="live-badge"><span className="pulse" /> Historical evidence <b>{currentFrame === null ? "No frame" : `Frame ${currentFrame}`}</b></div>
-        <div className="video-diagnostics"><span>CAM 01 / LEFT ROAD</span><span>{frameStatus === "ready" ? "Frame verified" : frameStatus === "error" ? "Frame unavailable" : "Loading evidence"}</span></div>
+        <div className="video-diagnostics"><span>{cameraView === "driver" ? "CAM 03 / DRIVER" : "CAM 01 / LEFT ROAD"}</span><span>{frameStatus === "ready" ? "Frame verified" : frameStatus === "error" ? "Frame unavailable" : "Loading evidence"}</span></div>
       </div>
 
       <div className="player-controls" aria-label="Replay controls">
@@ -127,7 +128,7 @@ export function TripVideoPlayer({
         <nav className="event-trace" aria-label="Risk event trace">
           <span>Trace risk event</span>
           {evidence.map((event) => (
-            <button key={`${event.label}-${event.frameIndex}`} type="button" className={`event-trace-button severity-${event.severity}`} onClick={() => { setIsPlaying(false); chooseFrame(event.frameIndex); }}>
+            <button key={`${event.label}-${event.frameIndex}`} type="button" className={`event-trace-button severity-${event.severity}`} onClick={() => { setIsPlaying(false); setCameraView(event.view); chooseFrame(event.frameIndex); }}>
               <b>F{event.frameIndex}</b>{event.label}
             </button>
           ))}

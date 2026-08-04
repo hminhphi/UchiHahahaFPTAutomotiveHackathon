@@ -17,7 +17,7 @@ export function TripReplayPanel({ tripId, trajectory, evidence }: { tripId: stri
       <section className="evidence-grid">
         <article className="video-panel panel">
           <div className="panel-heading">
-            <div><span className="eyebrow">Contextual video evidence</span><h2>Road-facing replay</h2></div>
+            <div><span className="eyebrow">Contextual video evidence</span><h2>Camera replay</h2></div>
             <span className="replay-chip">Frame-synchronised</span>
           </div>
           <TripVideoPlayer tripId={tripId} frameIndexes={frameIndexes} selectedFrameIndex={currentFrameIndex} evidence={evidence} onFrameIndexChange={setCurrentFrameIndex} />
@@ -29,6 +29,12 @@ export function TripReplayPanel({ tripId, trajectory, evidence }: { tripId: stri
           <ReplaySignal label="Lateral accel" value={point ? `${point.lateralAccelMps2.toFixed(2)} m/s2` : "-- m/s2"} detail={handlingDetail(point, "lateral")} tone="warning" />
           <ReplaySignal label="TTC / headway" value={ttcValue(point)} detail={ttcDetail(point)} tone="warning" />
           <ReplaySignal label="Driver state" value={point?.driverState ?? "unknown"} detail={driverDetail(point)} tone="blue" />
+          <ReplaySignal
+            label="Phone use"
+            value={point?.phoneUse === true ? "Detected" : point?.phoneUse === false ? "Not detected" : "Unavailable"}
+            detail={point?.phoneUse === true ? "Stable 3-of-5 frame detection" : "Independent DMS signal"}
+            tone={point?.phoneUse === true ? "warning" : "blue"}
+          />
         </aside>
       </section>
       <section className="bottom-grid">

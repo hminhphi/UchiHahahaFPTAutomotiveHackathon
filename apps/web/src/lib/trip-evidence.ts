@@ -6,6 +6,7 @@ export interface TripEvidence {
   label: string;
   severity: 1 | 2 | 3 | 4 | 5;
   time: string;
+  view: "road_left" | "driver";
 }
 
 export interface TripScoreSignal {
@@ -68,6 +69,7 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: point.minTtcS < 1.5 ? "TTC entered critical range" : "Short TTC detected",
       detail: `TTC ${point.minTtcS.toFixed(1)} s from organizer telemetry`,
       severity: point.minTtcS < 1.5 ? 5 : 4,
+      view: "road_left",
     });
   }
   if (point.events.includes("harsh_brake")) {
@@ -77,6 +79,7 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: "Harsh braking detected",
       detail: `Longitudinal acceleration ${point.longitudinalAccelMps2.toFixed(1)} m/s2`,
       severity: 4,
+      view: "road_left",
     });
   }
   if (point.events.includes("fast_corner")) {
@@ -86,6 +89,7 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: "Fast corner detected",
       detail: `Lateral acceleration ${Math.abs(point.lateralAccelMps2).toFixed(1)} m/s2`,
       severity: 3,
+      view: "road_left",
     });
   }
   if (point.events.includes("speeding")) {
@@ -95,6 +99,7 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: "Speeding telemetry flag",
       detail: `Vehicle speed ${point.speedKmh.toFixed(0)} km/h`,
       severity: 3,
+      view: "road_left",
     });
   }
   if (point.driverState === "drowsy" || point.driverState === "distracted") {
@@ -106,6 +111,17 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
         ? "Driver-state telemetry"
         : `Alertness ${Math.round(point.driverAlertness * 100)}%`,
       severity: point.driverState === "drowsy" ? 4 : 3,
+      view: "driver",
+    });
+  }
+  if (point.phoneUse === true) {
+    evidence.push({
+      frameIndex: point.frameIndex,
+      time,
+      label: "Phone use detected",
+      detail: "Stable in-cabin phone detection",
+      severity: 3,
+      view: "driver",
     });
   }
   if (point.simulatorRiskScore !== null && point.simulatorRiskScore >= 80) {
@@ -115,6 +131,7 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: "High simulator risk score",
       detail: `Reference risk score ${Math.round(point.simulatorRiskScore)}/100`,
       severity: 4,
+      view: "road_left",
     });
   }
   return evidence;
