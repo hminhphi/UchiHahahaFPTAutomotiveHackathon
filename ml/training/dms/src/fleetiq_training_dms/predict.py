@@ -11,6 +11,7 @@ from fleetiq_training_dms.config import Config
 from fleetiq_training_dms.dataset import FEATURE_COLS
 from fleetiq_training_dms.feature_extractor import extract_features_from_trip
 from fleetiq_training_dms.model import build_sequence_model
+from fleetiq_training_dms.phone_detector import PhoneUseDetector, PhoneUseSmoother
 
 
 def predict_sequence_trip(
@@ -20,6 +21,7 @@ def predict_sequence_trip(
     mean_scaler: np.ndarray | None = None,
     std_scaler: np.ndarray | None = None,
     device: str = "cpu",
+    phone_detector: PhoneUseDetector | None = None,
 ) -> pd.DataFrame:
     """Run sequence prediction on a single trip directory."""
     trip_dir = Path(trip_dir)
@@ -42,6 +44,7 @@ def predict_sequence_trip(
     n_samples = len(df_feat)
     results = []
     model.eval()
+    phone_smoother = PhoneUseSmoother()
 
     with torch.no_grad():
         for i in range(n_samples):
@@ -57,11 +60,20 @@ def predict_sequence_trip(
             logits = model(x)
             pred_idx = torch.argmax(logits, dim=1).item()
             pred_state = Config.STATE_INV_MAP.get(pred_idx, "alert")
+            frame_id = int(df_feat.iloc[i]["frame_id"])
+            raw_phone_use = (
+                phone_detector.detect(
+                    trip_dir / "driver" / f"frame_{frame_id:06d}.jpg"
+                )
+                if phone_detector is not None
+                else None
+            )
 
             results.append({
-                "frame_id": df_feat.iloc[i]["frame_id"],
+                "frame_id": frame_id,
                 "timestamp": df_feat.iloc[i]["timestamp"],
                 "predicted_driver_state": pred_state,
+                "phone_use": phone_smoother.update(raw_phone_use),
             })
 
     return pd.DataFrame(results)
@@ -71,6 +83,8 @@ def main():
     parser = argparse.ArgumentParser(description="Run Solution 2 (Two-Stage Bi-LSTM) prediction for a trip")
     parser.add_argument("--trip-dir", type=str, required=True, help="Path to trip directory")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to checkpoint .pt file")
+    parser.add_argument("--phone-model", type=Path, default=Path("yolo11n.pt"))
+    parser.add_argument("--phone-confidence", type=float, default=0.40)
     parser.add_argument("--output", type=str, default=None, help="Path to output CSV file")
     args = parser.parse_args()
 
@@ -100,8 +114,15 @@ def main():
     else:
         print(f"[Warning] Checkpoint {ckpt_path} not found. Running with default weights.")
 
+    phone_detector = PhoneUseDetector(args.phone_model, confidence=args.phone_confidence)
     df_pred = predict_sequence_trip(
-        model, trip_dir, seq_len=Config.SEQ_LEN, mean_scaler=mean_scaler, std_scaler=std_scaler, device=Config.DEVICE
+        model,
+        trip_dir,
+        seq_len=Config.SEQ_LEN,
+        mean_scaler=mean_scaler,
+        std_scaler=std_scaler,
+        device=Config.DEVICE,
+        phone_detector=phone_detector,
     )
 
     out_path = Path(args.output) if args.output else Config.PRED_DIR / f"{trip_id}_twostage.csv"
