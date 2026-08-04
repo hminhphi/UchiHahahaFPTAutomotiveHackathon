@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from fleetiq_api.config import ApiSettings
 from fleetiq_api.main import create_app
@@ -38,6 +40,17 @@ def test_environment_parser_rejects_invalid_integer() -> None:
                 "FLEETIQ_MAX_FRAME_BYTES": "many",
             }
         )
+
+
+def test_environment_parses_dms_prediction_root() -> None:
+    settings = ApiSettings.from_environment(
+        {
+            "FLEETIQ_TESTING": "true",
+            "FLEETIQ_DMS_PREDICTION_ROOT": "artifacts/test-dms",
+        }
+    )
+
+    assert settings.dms_prediction_root == Path("artifacts/test-dms")
 
 
 def test_s3_media_requires_endpoint_and_credentials() -> None:

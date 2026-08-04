@@ -64,6 +64,7 @@ def build_trajectory(trip_id: str, document: dict[str, Any]) -> TrajectoryData:
             min_ttc_s=_finite_nonnegative(raw_frame.get("min_ttc")),
             headway_s=_finite_nonnegative(raw_frame.get("headway_sec")),
             driver_state=_string_field(driver, "state", "unknown"),
+            phone_use=_optional_bool(_mapping_value(driver, "phone_use")),
             driver_alertness=_bounded_unit(_mapping_value(driver, "alertness_score")),
             simulator_risk_score=_bounded_score(_mapping_value(risk, "final_risk_score")),
             active_event_types=_active_event_types(raw_frame.get("events_active")),
@@ -127,6 +128,10 @@ def _string_field(value: object, key: str, fallback: str) -> str:
 def _bounded_unit(value: object) -> float | None:
     candidate = _finite(value)
     return max(0.0, min(1.0, candidate)) if candidate is not None else None
+
+
+def _optional_bool(value: object) -> bool | None:
+    return value if isinstance(value, bool) else None
 
 
 def _bounded_score(value: object) -> float | None:

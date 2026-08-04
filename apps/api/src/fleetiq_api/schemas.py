@@ -71,6 +71,7 @@ class TrajectoryPoint(ContractModel):
     min_ttc_s: float | None = Field(default=None, ge=0)
     headway_s: float | None = Field(default=None, ge=0)
     driver_state: str = Field(default="unknown", max_length=64)
+    phone_use: bool | None = None
     driver_alertness: float | None = Field(default=None, ge=0, le=1)
     simulator_risk_score: float | None = Field(default=None, ge=0, le=100)
     active_event_types: tuple[str, ...] = ()

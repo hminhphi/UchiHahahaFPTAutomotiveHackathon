@@ -28,7 +28,11 @@ def test_trajectory_uses_world_positions_and_bounds_acceleration() -> None:
                     "behavior_flags": {"harsh_brake": True},
                     "min_ttc": 1.25,
                     "headway_sec": 2.5,
-                    "driver": {"state": "Alert", "alertness_score": 1.5},
+                    "driver": {
+                        "state": "Alert",
+                        "alertness_score": 1.5,
+                        "phone_use": True,
+                    },
                     "risk": {"final_risk_score": 12.5},
                     "events_active": [{"event_type": "near_miss"}],
                 },
@@ -42,6 +46,8 @@ def test_trajectory_uses_world_positions_and_bounds_acceleration() -> None:
     assert result.points[1].longitudinal_accel_mps2 == -12
     assert result.points[1].min_ttc_s == 1.25
     assert result.points[1].driver_state == "alert"
+    assert result.points[1].phone_use is True
+    assert result.points[0].phone_use is None
     assert result.points[1].driver_alertness == 1
     assert result.points[1].active_event_types == ("near_miss",)
     assert result.points[1].events == ("harsh_brake", "fast_corner")

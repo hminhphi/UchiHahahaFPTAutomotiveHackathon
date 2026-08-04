@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import gzip
 import hashlib
 import hmac
@@ -42,8 +43,9 @@ class TripMediaStore(Protocol):
 
 
 class FilesystemTripMediaStore:
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, prediction_root: Path | None = None) -> None:
         self._root = root
+        self._prediction_root = prediction_root
 
     async def list_trip_ids(self) -> tuple[str, ...]:
         return await asyncio.to_thread(self._list_trip_ids)
@@ -79,7 +81,15 @@ class FilesystemTripMediaStore:
 
     async def read_trip_document(self, trip_id: str) -> dict[str, object]:
         path = self._root / trip_id / f"{trip_id}.json.gz"
-        return await asyncio.to_thread(_read_trip_document, path.read_bytes())
+        document = await asyncio.to_thread(_read_trip_document, path.read_bytes())
+        if self._prediction_root is None:
+            return document
+        prediction_path = self._prediction_root / f"{trip_id}_twostage.csv"
+        return await asyncio.to_thread(
+            _overlay_phone_predictions,
+            document,
+            prediction_path,
+        )
 
 
 class S3TripMediaStore:
@@ -317,7 +327,10 @@ def create_historical_dependencies(
     if settings.media_backend == "s3":
         media = S3TripMediaStore(settings)
     else:
-        media = FilesystemTripMediaStore(settings.dataset_root)
+        media = FilesystemTripMediaStore(
+            settings.dataset_root,
+            settings.dms_prediction_root,
+        )
     trips = HistoricalTripRepository(media)
     return (
         trips,
@@ -337,6 +350,31 @@ def _read_trip_document(contents: bytes) -> dict[str, object]:
 
     loaded = json.loads(gzip.decompress(contents).decode("utf-8"))
     return loaded if isinstance(loaded, dict) else {}
+
+
+def _overlay_phone_predictions(
+    document: dict[str, object],
+    path: Path,
+) -> dict[str, object]:
+    frames = document.get("frames")
+    if not path.is_file() or not isinstance(frames, list):
+        return document
+    predictions: dict[int, bool] = {}
+    with path.open(newline="", encoding="utf-8") as stream:
+        for row in csv.DictReader(stream):
+            frame_value = row.get("frame_id", "")
+            phone_value = row.get("phone_use", "").strip().casefold()
+            if not frame_value.isdigit() or phone_value not in {"true", "false"}:
+                continue
+            predictions[int(frame_value)] = phone_value == "true"
+
+    for frame in frames:
+        if not isinstance(frame, dict) or frame.get("frame_id") not in predictions:
+            continue
+        driver = frame.setdefault("driver", {})
+        if isinstance(driver, dict):
+            driver["phone_use"] = predictions[frame["frame_id"]]
+    return document
 
 
 def _signing_key(secret: str, date_stamp: str) -> bytes:
