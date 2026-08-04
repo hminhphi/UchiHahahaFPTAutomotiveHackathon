@@ -43,11 +43,22 @@ Biểu đồ ma trận nhầm lẫn sẽ được xuất tại:
 
 ### 3. Suy luận trên một Trip (Inference)
 
-Chạy dự đoán theo khung hình cho 1 trip và xuất file kết quả CSV bài nộp:
+Chuẩn bị checkpoint YOLO một lần (có thể cần network), sau đó chạy dự đoán
+theo khung hình cho một trip. DMS state vẫn là nhãn attention tổng quát;
+`phone_use` là tín hiệu độc lập và có thể để trống khi detector unavailable
+hoặc đang warm up.
 
-```powershell
-uv run --package fleetiq-training-dms fleetiq-predict-dms --trip-dir data/Practice_Dataset/Practice_Dataset/T01-Sample --output artifacts/predictions/dms/T01-Sample_predictions.csv
+```bash
+uv run --with ultralytics python -c 'from ultralytics import YOLO; YOLO("yolo11n.pt")'
 ```
+
+```bash
+uv run --with ultralytics --package fleetiq-training-dms python -c 'from fleetiq_training_dms.predict import main; main()' --trip-dir data/Practice_Dataset/T01-Sample --phone-model yolo11n.pt --phone-confidence 0.40 --output artifacts/predictions/dms/T01-Sample_twostage.csv
+```
+
+The prediction artifact contains `frame_id`, `timestamp`,
+`predicted_driver_state`, and `phone_use`. The API overlays this CSV when
+`FLEETIQ_DMS_PREDICTION_ROOT=artifacts/predictions/dms` is configured.
 
 ---
 
