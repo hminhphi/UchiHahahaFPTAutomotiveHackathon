@@ -12,7 +12,14 @@ from fleetiq_contracts.inference import (
 from fleetiq_fusion.worker import FusionWorker
 
 
-def inference(*, trip_id: str, frame: int, road: bool) -> InferenceResponse:
+def inference(
+    *,
+    trip_id: str,
+    frame: int,
+    road: bool,
+    driver_state: str = "distracted",
+    phone_use: bool | None = None,
+) -> InferenceResponse:
     values = {
         "schema_version": "1.0",
         "request_id": uuid4(),
@@ -41,7 +48,11 @@ def inference(*, trip_id: str, frame: int, road: bool) -> InferenceResponse:
             confidence=0.9,
         )
     else:
-        values["driver_state"] = DriverState(state="distracted", confidence=0.9)
+        values["driver_state"] = DriverState(
+            state=driver_state,
+            confidence=0.9,
+            phone_use=phone_use,
+        )
     return InferenceResponse(**values)
 
 
@@ -69,6 +80,24 @@ def test_worker_emits_compound_risk_event() -> None:
     assert event.severity == 5
     assert event.event_type == "compound_risk"
     assert "short_ttc" in event.explanation
+
+
+def test_worker_emits_phone_use_compound_risk_event() -> None:
+    event = FusionWorker().fuse(
+        inference(trip_id="T01-Sample", frame=10, road=True),
+        inference(
+            trip_id="T01-Sample",
+            frame=10,
+            road=False,
+            driver_state="attentive",
+            phone_use=True,
+        ),
+        telemetry(trip_id="T01-Sample", frame=10),
+    )
+
+    assert event.event_type == "compound_risk"
+    assert "phone_use" in event.explanation
+    assert "compound_risk" in event.explanation
 
 
 def test_worker_rejects_misaligned_trip() -> None:

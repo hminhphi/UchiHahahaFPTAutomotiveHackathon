@@ -20,6 +20,7 @@ class RiskScorer:
         *,
         ttc_s: float | None,
         driver_state: DriverStateName,
+        phone_use: bool | None = None,
         speed_mps: float,
         lane_offset_m: float | None,
         speed_limit_mps: float | None = None,
@@ -46,14 +47,19 @@ class RiskScorer:
                 codes.append("moderate_ttc_risk")
 
         attention_penalty = 0
-        if driver_state == "distracted":
-            attention_penalty = 15
-            codes.append("driver_distraction")
-            severity = max(severity, 2)
-        elif driver_state == "drowsy":
+        if driver_state == "drowsy":
             attention_penalty = 25
             codes.append("driver_drowsiness")
             severity = max(severity, 3)
+        elif driver_state == "distracted":
+            attention_penalty = 15
+            codes.append("driver_distraction")
+            severity = max(severity, 2)
+
+        if phone_use is True:
+            attention_penalty = max(attention_penalty, 15)
+            codes.append("phone_use")
+            severity = max(severity, 2)
 
         if collision_penalty and attention_penalty:
             severity = min(5, severity + 1)
