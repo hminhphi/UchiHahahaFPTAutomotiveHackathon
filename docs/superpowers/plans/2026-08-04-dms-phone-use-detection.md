@@ -775,7 +775,7 @@ Add:
 
 ~~~bash
 uv run --with ultralytics python -c 'from ultralytics import YOLO; YOLO("yolo11n.pt")'
-uv run --with ultralytics --package fleetiq-training-dms fleetiq-predict-dms --trip-dir data/Practice_Dataset/T01-Sample --phone-model yolo11n.pt --phone-confidence 0.40 --output artifacts/predictions/dms/T01-Sample_twostage.csv
+uv run --with ultralytics --package fleetiq-training-dms python -c 'from fleetiq_training_dms.predict import main; main()' --trip-dir data/Practice_Dataset/T01-Sample --phone-model yolo11n.pt --phone-confidence 0.40 --output artifacts/predictions/dms/T01-Sample_twostage.csv
 ~~~
 
 State that the first command may use network once. Empty phone_use means unavailable/warming up, not false.
@@ -809,7 +809,7 @@ Expected: yolo11n.pt exists locally. This is the only network-dependent step.
 - [ ] **Step 5: Generate T01 predictions**
 
 ~~~bash
-uv run --with ultralytics --package fleetiq-training-dms fleetiq-predict-dms --trip-dir data/Practice_Dataset/T01-Sample --phone-model yolo11n.pt --phone-confidence 0.40 --output artifacts/predictions/dms/T01-Sample_twostage.csv
+uv run --with ultralytics --package fleetiq-training-dms python -c 'from fleetiq_training_dms.predict import main; main()' --trip-dir data/Practice_Dataset/T01-Sample --phone-model yolo11n.pt --phone-confidence 0.40 --output artifacts/predictions/dms/T01-Sample_twostage.csv
 ~~~
 
 Expected columns: frame_id,timestamp,predicted_driver_state,phone_use.
