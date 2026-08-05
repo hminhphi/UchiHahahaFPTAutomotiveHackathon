@@ -20,7 +20,7 @@ export function TripReplayPanel({ tripId, trajectory, evidence }: { tripId: stri
             <div><span className="eyebrow">Contextual video evidence</span><h2>Camera replay</h2></div>
             <span className="replay-chip">Frame-synchronised</span>
           </div>
-          <TripVideoPlayer tripId={tripId} frameIndexes={frameIndexes} selectedFrameIndex={currentFrameIndex} evidence={evidence} onFrameIndexChange={setCurrentFrameIndex} />
+          <TripVideoPlayer tripId={tripId} frameIndexes={frameIndexes} selectedFrameIndex={currentFrameIndex} driverState={point?.driverState ?? null} phoneUse={point?.phoneUse ?? null} evidence={evidence} onFrameIndexChange={setCurrentFrameIndex} />
         </article>
         <aside className="signal-stack" aria-label="Frame synchronised telemetry">
           <ReplaySignal label="Replay time" value={point ? formatTime(point.timestampS) : "Waiting"} detail={point ? `Frame ${point.frameIndex}` : "Waiting for camera frame"} tone="blue" />
