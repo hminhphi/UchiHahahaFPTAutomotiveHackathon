@@ -71,6 +71,15 @@ uv run --with ultralytics --package fleetiq-training-dms \
 This updates `artifacts/predictions/dms/T01-Sample_twostage.csv`, which the
 API and notebook can use directly.
 
+For a live webcam, press `q` to stop:
+
+```bash
+uv run --with ultralytics --package fleetiq-training-dms \
+  python tools/live_phone_use.py
+```
+
+Use `--camera 1` if the desired camera is not webcam index 0.
+
 ---
 
 ## 📊 Thống Kê Hiệu Năng (Validation Results)
