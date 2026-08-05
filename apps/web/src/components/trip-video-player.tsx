@@ -102,15 +102,16 @@ export function TripVideoPlayer({
       <div className="live-view">
         <div className="camera-panes">
           <CameraPane label="Road camera" imageUrl={roadImageUrl} currentFrame={currentFrame} onLoad={() => setFrameStatus("ready")} onError={() => setFrameStatus("error")} />
-          <CameraPane label="Driver camera" imageUrl={driverImageUrl} currentFrame={currentFrame} />
+          <div className="driver-camera-row">
+            <CameraPane label="Driver camera" imageUrl={driverImageUrl} currentFrame={currentFrame} />
+            <div className="driver-signals" aria-label="Driver camera signals">
+              <span><b>Driver state</b>{driverState ?? "unknown"}</span>
+              <span className={phoneUse === true ? "signal-detected" : ""}><b>Phone use</b>{phoneUse === true ? "Detected" : phoneUse === false ? "Not detected" : "Unavailable"}</span>
+            </div>
+          </div>
         </div>
         <div className="live-badge"><span className="pulse" /> Historical evidence <b>{currentFrame === null ? "No frame" : `Frame ${currentFrame}`}</b></div>
         <div className="video-diagnostics"><span>CAM 01 + CAM 03 / SYNCHRONIZED</span><span>{frameStatus === "ready" ? "Frame verified" : frameStatus === "error" ? "Frame unavailable" : "Loading evidence"}</span></div>
-      </div>
-
-      <div className="driver-signals" aria-label="Driver camera signals">
-        <span><b>Driver state</b>{driverState ?? "unknown"}</span>
-        <span className={phoneUse === true ? "signal-detected" : ""}><b>Phone use</b>{phoneUse === true ? "Detected" : phoneUse === false ? "Not detected" : "Unavailable"}</span>
       </div>
 
       <div className="player-controls" aria-label="Replay controls">
