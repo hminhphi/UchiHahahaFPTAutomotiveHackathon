@@ -60,6 +60,17 @@ The prediction artifact contains `frame_id`, `timestamp`,
 `predicted_driver_state`, and `phone_use`. The API overlays this CSV when
 `FLEETIQ_DMS_PREDICTION_ROOT=artifacts/predictions/dms` is configured.
 
+For phone detection only, without running the DMS classifier:
+
+```bash
+uv run --with ultralytics --package fleetiq-training-dms \
+  python tools/detect_phone_use.py \
+  --trip-dir data/Practice_Dataset/T01-Sample
+```
+
+This updates `artifacts/predictions/dms/T01-Sample_twostage.csv`, which the
+API and notebook can use directly.
+
 ---
 
 ## 📊 Thống Kê Hiệu Năng (Validation Results)
