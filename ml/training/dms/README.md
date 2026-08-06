@@ -36,6 +36,18 @@ The script extracts drowsiness data to `data/dmd/drowsiness/`, distraction data 
 `--dataset drowsiness` or `--dataset distraction` to download only one group.
 Use `--delete-archives` when disk space is limited.
 
+### 0.1 Prepare face videos for training
+
+Only `*_rgb_face.mp4` files are read; frames are streamed into the existing 18-feature CSV format.
+
+```bash
+uv run --package fleetiq-training-dms fleetiq-prepare-vicomtech-dms \
+  --data-root data/DMD
+
+uv run --package fleetiq-training-dms fleetiq-train-dms \
+  --feature-dir artifacts/training/dms/vicomtech_features
+```
+
 ### 1. Trích xuất đặc trưng & Huấn luyện mô hình (Training)
 
 Chạy huấn luyện mô hình với chiến lược Temporal Block Split (80% past train / 20% future val):
