@@ -19,6 +19,7 @@ dependencies = [
 fleetiq-train-dms = "fleetiq_training_dms.train:main"
 fleetiq-evaluate-dms = "fleetiq_training_dms.evaluate:main"
 fleetiq-predict-dms = "fleetiq_training_dms.predict:main"
+fleetiq-download-dms = "fleetiq_training_dms.download_dataset:main"
 
 [tool.uv.sources]
 fleetiq-contracts = { workspace = true }
