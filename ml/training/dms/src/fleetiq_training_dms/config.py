@@ -9,7 +9,7 @@ class Config:
     # PATHS (Relative to Repository Root)
     # -------------------------------------------------------------------------
     REPO_ROOT = Path(__file__).resolve().parents[5]
-    DATA_ROOT = REPO_ROOT / "data" / "Practice_Dataset" / "Practice_Dataset"
+    DATA_ROOT = REPO_ROOT / "data" / "Practice_Dataset"
 
     FEATURE_DIR = REPO_ROOT / "artifacts" / "training" / "dms" / "extracted_features"
     OUTPUT_DIR = REPO_ROOT / "artifacts" / "models" / "dms"
@@ -18,7 +18,14 @@ class Config:
     # Default trips for practice dataset training/eval
     TRAIN_TRIPS = ["T01-Sample", "T02-Sample", "T03-Sample", "T04-Sample", "T05-Sample"]
     VAL_TRIPS = ["T06-Sample"]
-    ALL_TRIPS = ["T01-Sample", "T02-Sample", "T03-Sample", "T04-Sample", "T05-Sample", "T06-Sample"]
+    ALL_TRIPS = [
+        "T01-Sample",
+        "T02-Sample",
+        "T03-Sample",
+        "T04-Sample",
+        "T05-Sample",
+        "T06-Sample",
+    ]
 
     # -------------------------------------------------------------------------
     # TEMPORAL WINDOW CONFIGURATION
@@ -59,4 +66,10 @@ class Config:
     WEIGHT_DECAY = 1e-4
     EPOCHS = 20
 
-    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    DEVICE = (
+        "cuda"
+        if torch.cuda.is_available()
+        else "mps"
+        if torch.backends.mps.is_available()
+        else "cpu"
+    )

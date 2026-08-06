@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn as nn
+import timm
 
 
 class DriverSequenceModel(nn.Module):
@@ -74,3 +75,44 @@ def build_sequence_model(
         num_classes=num_classes,
         cell_type=cell_type,
     )
+
+
+class VisualLandmarkGRU(nn.Module):
+    """Frozen image encoder plus landmark sequence classifier."""
+
+    def __init__(
+        self,
+        image_model_name: str = "mobilenetv3_small_100",
+        feature_dim: int = 18,
+        hidden_dim: int = 128,
+        num_classes: int = 3,
+        pretrained: bool = True,
+    ):
+        super().__init__()
+        self.encoder = timm.create_model(
+            image_model_name,
+            pretrained=pretrained,
+            num_classes=0,
+            global_pool="avg",
+        )
+        for parameter in self.encoder.parameters():
+            parameter.requires_grad = False
+        self.encoder.eval()
+        with torch.no_grad():
+            encoder_dim = self.encoder(torch.zeros(1, 3, 64, 64)).shape[-1]
+
+        self.rnn = nn.GRU(
+            input_size=encoder_dim + feature_dim,
+            hidden_size=hidden_dim,
+            batch_first=True,
+            bidirectional=True,
+        )
+        self.classifier = nn.Linear(hidden_dim * 2, num_classes)
+
+    def forward(self, images: torch.Tensor, landmarks: torch.Tensor) -> torch.Tensor:
+        batch_size, sequence_length = images.shape[:2]
+        with torch.no_grad():
+            embeddings = self.encoder(images.flatten(0, 1)).reshape(batch_size, sequence_length, -1)
+        fused = torch.cat((embeddings, landmarks), dim=-1)
+        sequence, _ = self.rnn(fused)
+        return self.classifier(sequence[:, -1, :])
