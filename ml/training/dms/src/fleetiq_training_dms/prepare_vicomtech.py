@@ -36,6 +36,8 @@ def label_for_action(action_type: str, annotation_path: Path, frames: int, fps: 
 
 def labels_from_openlabel(annotation_path: Path, frame_count: int, fps: float) -> np.ndarray:
     """Return one FleetIQ state label per video frame from OpenLABEL intervals."""
+    if frame_count <= 0:
+        raise ValueError(f"Video has no readable frames: {annotation_path}")
     data = json.loads(annotation_path.read_text(encoding="utf-8"))
     actions = data.get("openlabel", {}).get("actions", {})
     labels = np.full(frame_count, Config.STATE_MAP["alert"], dtype=np.int64)
@@ -123,7 +125,7 @@ def prepare(data_root: Path, output_dir: Path) -> int:
         frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = capture.get(cv2.CAP_PROP_FPS) or 25.0
         capture.release()
-        if frame_count == 0:
+        if frame_count <= 0:
             print(f"[skip] unreadable {video_path}")
             continue
         sample_id = video_path.name.removesuffix("_rgb_face.mp4")
