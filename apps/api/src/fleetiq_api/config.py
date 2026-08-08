@@ -22,6 +22,7 @@ class ApiSettings(BaseModel):
     replay_loop: bool = True
     media_backend: Literal["filesystem", "s3"] = "filesystem"
     dataset_root: Path = Path("data/Practice_Dataset/Practice_Dataset")
+    dms_prediction_root: Path = Path("artifacts/predictions/dms")
     object_storage_endpoint: str | None = None
     object_storage_bucket: str = "fleetiq-demo"
     object_storage_access_key: str | None = None
@@ -107,6 +108,11 @@ class ApiSettings(BaseModel):
             dataset_root=Path(
                 environment.get(
                     "FLEETIQ_DATASET_ROOT", "data/Practice_Dataset/Practice_Dataset"
+                )
+            ),
+            dms_prediction_root=Path(
+                environment.get(
+                    "FLEETIQ_DMS_PREDICTION_ROOT", "artifacts/predictions/dms"
                 )
             ),
             object_storage_endpoint=environment.get("FLEETIQ_OBJECT_STORAGE_ENDPOINT"),

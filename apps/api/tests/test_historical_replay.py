@@ -1,6 +1,30 @@
 import asyncio
+import gzip
+import json
 
 from fleetiq_api.historical_replay import FilesystemTripMediaStore, HistoricalTripFrameReader
+
+
+def test_filesystem_store_overlays_phone_predictions(tmp_path) -> None:
+    dataset = tmp_path / "data"
+    predictions = tmp_path / "predictions"
+    trip = dataset / "T01-Sample"
+    trip.mkdir(parents=True)
+    predictions.mkdir()
+    document = {"frames": [{"frame_id": 7, "driver": {"state": "alert"}}]}
+    (trip / "T01-Sample.json.gz").write_bytes(
+        gzip.compress(json.dumps(document).encode())
+    )
+    (predictions / "T01-Sample_twostage.csv").write_text(
+        "frame_id,phone_use\n7,True\n",
+        encoding="utf-8",
+    )
+
+    async def scenario():
+        return await FilesystemTripMediaStore(dataset, predictions).read_trip_document("T01-Sample")
+
+    result = asyncio.run(scenario())
+    assert result["frames"][0]["driver"]["phone_use"] is True
 
 
 def test_filesystem_store_discovers_organizer_road_and_driver_frames(tmp_path) -> None:

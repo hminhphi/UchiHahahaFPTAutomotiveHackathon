@@ -7,6 +7,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "fleetiq-contracts",
     "fleetiq-model-clients[aws]",
+    "fleetiq-training-dms",
     "pydantic>=2.11,<3",
 ]
 
@@ -16,6 +17,7 @@ fleetiq-dms-worker = "fleetiq_dms.main:main"
 [tool.uv.sources]
 fleetiq-contracts = { workspace = true }
 fleetiq-model-clients = { workspace = true }
+fleetiq-training-dms = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

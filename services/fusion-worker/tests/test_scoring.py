@@ -56,3 +56,29 @@ def test_driver_distraction_alone_is_actionable() -> None:
 
     assert result.severity == 2
     assert result.explanation_codes == ["driver_distraction"]
+
+
+def test_phone_use_is_actionable_without_overwriting_state() -> None:
+    result = RiskScorer().score(
+        ttc_s=None,
+        driver_state="attentive",
+        phone_use=True,
+        speed_mps=10.0,
+        lane_offset_m=None,
+    )
+
+    assert result.penalties["attention"] == 15
+    assert result.explanation_codes == ["phone_use"]
+
+
+def test_phone_use_does_not_duplicate_distraction_penalty() -> None:
+    result = RiskScorer().score(
+        ttc_s=None,
+        driver_state="distracted",
+        phone_use=True,
+        speed_mps=10.0,
+        lane_offset_m=None,
+    )
+
+    assert result.penalties["attention"] == 15
+    assert result.explanation_codes == ["driver_distraction", "phone_use"]

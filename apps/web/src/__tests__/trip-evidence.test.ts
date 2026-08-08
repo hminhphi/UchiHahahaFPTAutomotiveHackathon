@@ -12,12 +12,14 @@ const trajectory = {
       frameIndex: 0, timestampS: 0, xM: 0, yM: 0, speedKmh: 50,
       longitudinalAccelMps2: 0, lateralAccelMps2: 0, minTtcS: null, headwayS: null,
       driverState: "attentive", driverAlertness: 0.9, simulatorRiskScore: 10,
+      phoneUse: null,
       activeEventTypes: [], events: [],
     },
     {
       frameIndex: 12, timestampS: 1.2, xM: 5, yM: 0, speedKmh: 80,
       longitudinalAccelMps2: -5, lateralAccelMps2: 0, minTtcS: 1.2, headwayS: 0.8,
       driverState: "drowsy", driverAlertness: 0.3, simulatorRiskScore: 90,
+      phoneUse: null,
       activeEventTypes: ["near_miss"], events: ["harsh_brake", "speeding"],
     },
   ],
@@ -36,5 +38,21 @@ describe("trip evidence", () => {
     const signals = buildTripScoreSignals({ ...trajectory, points: [] });
 
     expect(signals.every((signal) => signal.value === null)).toBe(true);
+  });
+
+  it("links phone evidence to the driver camera", () => {
+    const evidence = buildTripEvidence({
+      ...trajectory,
+      points: [{ ...trajectory.points[0], frameIndex: 10, phoneUse: true }],
+    });
+
+    expect(evidence).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        label: "Phone use detected",
+        frameIndex: 10,
+        severity: 3,
+        view: "driver",
+      }),
+    ]));
   });
 });

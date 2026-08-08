@@ -27,6 +27,8 @@ interface TripVideoPlayerProps {
   tripId: string;
   frameIndexes: number[];
   selectedFrameIndex: number | null;
+  driverState: string | null;
+  phoneUse: boolean | null;
   evidence: TripEvidence[];
   onFrameIndexChange: (frameIndex: number) => void;
 }
@@ -35,6 +37,8 @@ export function TripVideoPlayer({
   tripId,
   frameIndexes,
   selectedFrameIndex,
+  driverState,
+  phoneUse,
   evidence,
   onFrameIndexChange,
 }: TripVideoPlayerProps) {
@@ -44,9 +48,12 @@ export function TripVideoPlayer({
   const [frameStatus, setFrameStatus] = useState<"loading" | "ready" | "error">("loading");
   const currentFrame = nearestFrameIndex(frameIndexes, selectedFrameIndex ?? frameIndexes[0] ?? 0);
   const currentPosition = currentFrame === null ? 0 : framePosition(frameIndexes, currentFrame);
-  const imageUrl = currentFrame === null
+  const roadImageUrl = currentFrame === null
     ? null
     : `/api/trips/${encodeURIComponent(tripId)}/frames/road_left/${currentFrame}`;
+  const driverImageUrl = currentFrame === null
+    ? null
+    : `/api/trips/${encodeURIComponent(tripId)}/frames/driver/${currentFrame}`;
 
   useEffect(() => {
     const onFullscreenChange = () => setIsFullscreen(document.fullscreenElement === playerRef.current);
@@ -65,7 +72,7 @@ export function TripVideoPlayer({
     return () => window.clearTimeout(timer);
   }, [currentFrame, frameIndexes, isPlaying, onFrameIndexChange]);
 
-  useEffect(() => setFrameStatus("loading"), [imageUrl]);
+  useEffect(() => setFrameStatus("loading"), [roadImageUrl]);
 
   function chooseFrame(frameIndex: number) {
     const nearest = nearestFrameIndex(frameIndexes, frameIndex);
@@ -91,17 +98,20 @@ export function TripVideoPlayer({
   }
 
   return (
-    <section className="trip-video-player" ref={playerRef} aria-label="Historical road-facing video player">
+    <section className="trip-video-player" ref={playerRef} aria-label="Historical camera video player">
       <div className="live-view">
-        {imageUrl ? (
-          // Exact historical frames are intentionally served from the same-origin Next proxy.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img alt={`Road-facing camera frame ${currentFrame}`} src={imageUrl} onLoad={() => setFrameStatus("ready")} onError={() => setFrameStatus("error")} />
-        ) : (
-          <div className="camera-placeholder"><div className="road-grid" /><strong>No historical frames</strong><span>This trip has no road-facing camera evidence.</span></div>
-        )}
+        <div className="camera-panes">
+          <CameraPane label="Road camera" imageUrl={roadImageUrl} currentFrame={currentFrame} onLoad={() => setFrameStatus("ready")} onError={() => setFrameStatus("error")} />
+          <div className="driver-camera-row">
+            <CameraPane label="Driver camera" imageUrl={driverImageUrl} currentFrame={currentFrame} />
+            <div className="driver-signals" aria-label="Driver camera signals">
+              <span><b>Driver state</b>{driverState ?? "unknown"}</span>
+              <span className={phoneUse === true ? "signal-detected" : ""}><b>Phone use</b>{phoneUse === true ? "Detected" : phoneUse === false ? "Not detected" : "Unavailable"}</span>
+            </div>
+          </div>
+        </div>
         <div className="live-badge"><span className="pulse" /> Historical evidence <b>{currentFrame === null ? "No frame" : `Frame ${currentFrame}`}</b></div>
-        <div className="video-diagnostics"><span>CAM 01 / LEFT ROAD</span><span>{frameStatus === "ready" ? "Frame verified" : frameStatus === "error" ? "Frame unavailable" : "Loading evidence"}</span></div>
+        <div className="video-diagnostics"><span>CAM 01 + CAM 03 / SYNCHRONIZED</span><span>{frameStatus === "ready" ? "Frame verified" : frameStatus === "error" ? "Frame unavailable" : "Loading evidence"}</span></div>
       </div>
 
       <div className="player-controls" aria-label="Replay controls">
@@ -134,5 +144,36 @@ export function TripVideoPlayer({
         </nav>
       ) : null}
     </section>
+  );
+}
+
+function CameraPane({
+  label,
+  imageUrl,
+  currentFrame,
+  onLoad,
+  onError,
+}: {
+  label: string;
+  imageUrl: string | null;
+  currentFrame: number | null;
+  onLoad?: () => void;
+  onError?: () => void;
+}) {
+  const [unavailable, setUnavailable] = useState(false);
+
+  useEffect(() => setUnavailable(false), [imageUrl]);
+
+  return (
+    <div className="camera-pane">
+      {imageUrl && !unavailable ? (
+        // Exact historical frames are intentionally served from the same-origin Next proxy.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img alt={`${label === "Driver camera" ? "Driver" : "Road-facing"} camera frame ${currentFrame}`} src={imageUrl} onLoad={onLoad} onError={() => { setUnavailable(true); onError?.(); }} />
+      ) : (
+        <div className="camera-placeholder"><div className="road-grid" /><strong>{currentFrame === null ? "No historical frames" : "Camera frame unavailable"}</strong><span>{label}</span></div>
+      )}
+      <span className="camera-pane-label">{label}</span>
+    </div>
   );
 }

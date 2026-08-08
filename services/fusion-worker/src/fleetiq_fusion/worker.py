@@ -38,6 +38,7 @@ class FusionWorker:
         score = self._scorer.score(
             ttc_s=ttc_s,
             driver_state=dms.driver_state.state,
+            phone_use=dms.driver_state.phone_use,
             speed_mps=telemetry.speed_mps or 0.0,
             speed_limit_mps=telemetry.speed_limit_mps,
             longitudinal_accel_mps2=telemetry.longitudinal_accel_mps2,
