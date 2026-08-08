@@ -84,3 +84,30 @@ extracted_text/
 *.jar
 Template for Teams - Hackathon 2026.pptx
 Automotive Hackathon Webinar 25.06 (1).pdf
+
+# Playwright & CarSky temporary inspection files
+.playwright-mcp/
+*.png
+*.html
+*.cjs
+inspect_*.py
+deploy_*.py
+deploy_*.json
+extract_*.py
+patch_*.py
+redeploy_*.cjs
+restart_*.cjs
+get_*.cjs
+trigger_*.cjs
+update_*.cjs
+check_carsky_ui_live.cjs
+blueprint-Uchi-clone.json
+deployment_texts.json
+fix_agent.patch
+claud
+carsky_io/
+Dockerfile.lite
+deploy_via_node.js
+modify_payload.py
+
+

@@ -15,5 +15,8 @@ RUN sed -i 's/cu130/cpu/g' pyproject.toml && \
 # Copy toàn bộ mã nguồn (đã bỏ qua thư mục data nhờ .dockerignore)
 COPY . .
 
+EXPOSE 8080
+
 # Chạy script agent kết nối KUKSA mặc định
 CMD [".venv/bin/python", "scripts/carsky_agent.py"]
+
