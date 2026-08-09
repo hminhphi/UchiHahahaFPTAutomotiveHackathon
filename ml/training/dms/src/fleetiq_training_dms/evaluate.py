@@ -26,7 +26,7 @@ def evaluate_solution_2():
     print("=" * 70)
 
     # 1. Load Validation Dataloader (Temporal Block Split 80/20)
-    _, val_loader, mean_scaler, std_scaler = get_temporal_block_dataloaders(
+    _, val_loader, mean_scaler, std_scaler, _ = get_temporal_block_dataloaders(
         Config.FEATURE_DIR, Config.ALL_TRIPS, seq_len=Config.SEQ_LEN, batch_size=Config.BATCH_SIZE, train_ratio=0.8
     )
 

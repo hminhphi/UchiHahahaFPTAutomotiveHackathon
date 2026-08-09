@@ -3,6 +3,7 @@
 import argparse
 import time
 from pathlib import Path
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -87,13 +88,13 @@ def main(argv: list[str] | None = None):
         trip_ids = Config.ALL_TRIPS
 
     # 2. Tạo DataLoaders theo Temporal Block Split (80% past train / 20% future val per trip)
-    train_loader, val_loader, mean_scaler, std_scaler = get_temporal_block_dataloaders(
+    train_loader, val_loader, mean_scaler, std_scaler, class_weights = get_temporal_block_dataloaders(
         feature_dir, trip_ids, seq_len=Config.SEQ_LEN, batch_size=Config.BATCH_SIZE, train_ratio=0.8
     )
 
     feature_dim = len(FEATURE_COLS)
 
-    # 3. Khởi tạo Model
+    # 3. Khởi tạo Model & Loss Criterion
     model = build_sequence_model(
         feature_dim=feature_dim,
         hidden_dim=Config.HIDDEN_DIM,
@@ -102,7 +103,17 @@ def main(argv: list[str] | None = None):
         cell_type=Config.MODEL_TYPE,
     ).to(Config.DEVICE)
 
-    criterion = nn.CrossEntropyLoss()
+    if getattr(Config, "USE_CLASS_WEIGHTS", False):
+        weight_tensor = class_weights.to(Config.DEVICE)
+        criterion = nn.CrossEntropyLoss(weight=weight_tensor)
+        print("[Class Weighting Enabled]")
+        for cls_idx in range(Config.NUM_CLASSES):
+            cls_name = Config.STATE_INV_MAP.get(cls_idx, f"Class {cls_idx}")
+            print(f"   - Class {cls_idx} ({cls_name:<10s}): Weight = {class_weights[cls_idx]:.4f}")
+    else:
+        criterion = nn.CrossEntropyLoss()
+        print("[Class Weighting Disabled] Using standard CrossEntropyLoss")
+
     optimizer = optim.AdamW(model.parameters(), lr=Config.LEARNING_RATE, weight_decay=Config.WEIGHT_DECAY)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=Config.EPOCHS)
 
@@ -132,6 +143,7 @@ def main(argv: list[str] | None = None):
                 "feature_dim": feature_dim,
                 "mean_scaler": mean_scaler,
                 "std_scaler": std_scaler,
+                "class_weights": class_weights.cpu().numpy(),
             }, best_path)
             print(f"   --> Saved best checkpoint to: {best_path} (Val Acc: {best_val_acc:.4f})")
 
@@ -142,3 +154,4 @@ def main(argv: list[str] | None = None):
 
 if __name__ == "__main__":
     main()
+

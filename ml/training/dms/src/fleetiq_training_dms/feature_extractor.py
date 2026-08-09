@@ -227,21 +227,27 @@ def extract_features_from_trip(trip_dir: str | Path, landmarker=None, is_train: 
 
 
 def extract_all_and_save():
-    """Extract features for all configured practice dataset trips and save CSVs."""
+    """Extract features for all configured trips and save CSVs."""
     Config.FEATURE_DIR.mkdir(parents=True, exist_ok=True)
     all_trips = Config.ALL_TRIPS
-    print(f"[Stage 1] Extracting 18 Continuous Features for trips: {all_trips}")
+    print(f"[Stage 1] Extracting 18 Pure Continuous Features for trips: {all_trips}")
 
     landmarker = init_landmarker()
 
     for trip_id in all_trips:
-        trip_dir = Config.DATA_ROOT / trip_id
+        # Use get_trip_dir() to support both Practice_Dataset and DMD_Processed
+        trip_dir = Config.get_trip_dir(trip_id)
         if not trip_dir.exists():
             print(f"[Warning] Trip dir {trip_dir} does not exist.")
             continue
 
-        df = extract_features_from_trip(trip_dir, landmarker=landmarker, is_train=True)
+        # Skip if already extracted
         save_path = Config.FEATURE_DIR / f"{trip_id}_features.csv"
+        if save_path.exists():
+            print(f"[Skip] {trip_id} features already extracted -> {save_path}")
+            continue
+
+        df = extract_features_from_trip(trip_dir, landmarker=landmarker, is_train=True)
         df.to_csv(save_path, index=False)
         print(f" -> Extracted {len(df)} rows for {trip_id} -> {save_path}")
 

@@ -6,6 +6,8 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+from fleetiq_training_dms.config import Config
+
 FEATURE_COLS = [
     "ear", "mar", "pitch", "yaw", "roll",
     "delta_ear", "delta_mar", "delta_pitch", "delta_yaw", "delta_roll",
@@ -40,13 +42,28 @@ class DriverSequenceDataset(Dataset):
         return x, y, frame_id, trip_id
 
 
+def compute_class_weights(labels: np.ndarray, num_classes: int = 5, power: float = 0.5) -> torch.Tensor:
+    """Compute class weights from training labels using smoothed inverse frequency.
+
+    Formula: w_c = (N_total / (K * N_c)) ** power
+    Normalized so that mean weight = 1.0 (sum of weights = num_classes).
+    """
+    counts = np.bincount(labels, minlength=num_classes).astype(np.float32)
+    total_samples = len(labels)
+    counts = np.maximum(counts, 1.0)  # Avoid division by zero
+
+    raw_weights = (total_samples / (num_classes * counts)) ** power
+    weights = raw_weights / np.mean(raw_weights)
+    return torch.tensor(weights, dtype=torch.float32)
+
+
 def get_temporal_block_dataloaders(
     feature_dir: str | Path,
     trip_ids: list[str],
     seq_len: int = 20,
     batch_size: int = 32,
     train_ratio: float = 0.8,
-) -> tuple[DataLoader, DataLoader, np.ndarray, np.ndarray]:
+) -> tuple[DataLoader, DataLoader, np.ndarray, np.ndarray, torch.Tensor]:
     """Split time-series data per trip: 80% past -> Train, 20% future -> Validation."""
     feature_dir = Path(feature_dir)
 
@@ -107,6 +124,11 @@ def get_temporal_block_dataloaders(
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, pin_memory=torch.cuda.is_available())
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, pin_memory=torch.cuda.is_available())
 
-    print(f"[TemporalBlockDataset] Train samples: {len(train_ds)} | Val samples: {len(val_ds)}")
+    # Compute class weights from training labels
+    power = getattr(Config, "CLASS_WEIGHT_POWER", 0.5)
+    class_weights = compute_class_weights(train_ds.labels, num_classes=Config.NUM_CLASSES, power=power)
 
-    return train_loader, val_loader, mean, std
+    print(f"[TemporalBlockDataset] Train samples: {len(train_ds)} | Val samples: {len(val_ds)} (18 Continuous Features)")
+
+    return train_loader, val_loader, mean, std, class_weights
+
