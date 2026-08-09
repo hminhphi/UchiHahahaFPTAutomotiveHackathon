@@ -550,13 +550,42 @@ FleetIQ Guardian is a practical and judge-friendly proposal because it uses the 
 
 The recommended path is to submit under **Challenge #3**, implement Challenge #1 and Challenge #2 as core engines, and demo a polished end-to-end trip intelligence workflow.
 
+## Progress Status (2026-08-10)
+
+### Completed
+
+- [x] LocateAnything labeling: 17,999/17,999 frames (100%) across T01d–T10d, 14,291 frames with ≥1 box
+- [x] DMS training: 95.17% val accuracy (epoch 7), checkpoint at `artifacts/models/dms/best_sequence_model.pt`
+- [x] YOLO v2 training: 100 epochs complete, best mAP50=0.40952 at epoch 43
+- [x] PR #47 merged: Driver behavior detection with phone use (cam-driver-phone-use branch)
+- [x] Depth endpoint fixed and verified
+- [x] Road video streaming working
+- [x] DMS analysis returning real per-frame state
+- [x] Custom dataset export: 13,668 train / 1,760 val / 1,844 test with per-trip 80/10/10 split from label2_custom
+- [x] Dark mode tokens applied to UI (Geist font + dark theme)
+- [x] Web container rebuilt and deployed with updated styles
+
+### In Progress
+
+- [ ] YOLO v4 finetune: epoch 33/50, best mAP50=0.393 at epoch 13 (training in progress)
+- [ ] Fix trajectory UI flip issue (video shows left turn but trajectory shows right)
+
+### Next Actions
+
+- [ ] Wait for YOLO v4 training completion (patience=20, likely to finish around epoch 45-50)
+- [ ] Regenerate artifacts for T01d–T10d with new YOLO v4 model
+- [ ] Verify object detection appears on dashboard trip pages
+- [ ] Debug trajectory coordinate mapping (check if lon/lat or camera frame inverted)
+- [ ] Prepare final demo script and presentation
+- [ ] Verify Challenge #2 TTC/near-miss implementation works end-to-end
+
 ## Next Action Checklist
 
-- [ ] Confirm final challenge category as Challenge #3.
-- [ ] Build the canonical trip and event schema.
-- [ ] Load one sample trip from the starter kit.
-- [ ] Generate baseline score and TTC JSON.
-- [ ] Build dashboard from static JSON.
-- [ ] Add scoring and TTC APIs.
-- [ ] Add evidence frames and timeline markers.
+- [x] Confirm final challenge category as Challenge #3.
+- [x] Build the canonical trip and event schema.
+- [x] Load one sample trip from the starter kit.
+- [x] Generate baseline score and TTC JSON.
+- [x] Build dashboard from static JSON.
+- [x] Add scoring and TTC APIs.
+- [x] Add evidence frames and timeline markers.
 - [ ] Prepare final proposal slides and 3-minute demo.
