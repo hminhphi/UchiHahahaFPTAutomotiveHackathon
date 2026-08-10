@@ -5,13 +5,14 @@ PDF.
 
 Owner: Product and Pitch Lead.
 
-The final Round 2 pair is:
+The final Round 2 delivery pair is:
 
 - `UchiHahaha_FleetIQGuardian_Final_Round2.pptx`
 - `UchiHahaha_FleetIQGuardian_Final_Round2.pdf`
 
-The PPTX is the editable source; the PDF is the presentation-safe export. Keep
-only this pair in the submission packet.
+The PPTX is the editable source; the PDF is the presentation-safe export. The
+delivery deck contains ten organizer-facing slides; implementation caveats and
+model provenance remain in the report and model documentation.
 Persistent final-deck source images belong in `assets/`; temporary renders
 belong in `artifacts/presentations/`.
 

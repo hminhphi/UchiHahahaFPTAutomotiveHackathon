@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "v1.1.2",
+    [string]$Version = "v1.1.3",
     [switch]$PrivateReviewerHandoff,
     [switch]$IncludeDataset,
     [switch]$IncludeYolopMasks,
@@ -51,7 +51,11 @@ function Copy-RequiredPath {
     New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
     if (Test-Path -LiteralPath $source -PathType Container) {
         New-Item -ItemType Directory -Path $destination -Force | Out-Null
-        & robocopy $source $destination /E /COPY:DAT /DCOPY:T /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+        $robocopyArgs = @($source, $destination, "/E", "/COPY:DAT", "/DCOPY:T", "/R:1", "/W:1", "/NFL", "/NDL", "/NJH", "/NJS", "/NP")
+        if ($RelativePath -eq "submission\UchiHahaha_FleetIQ_Guardian_Round2_Final") {
+            $robocopyArgs += @("/XF", "FleetIQ_Guardian_Round2_Demo_caption.mp4")
+        }
+        & robocopy @robocopyArgs | Out-Null
         if ($LASTEXITCODE -gt 7) {
             throw "robocopy failed for $RelativePath with exit code $LASTEXITCODE"
         }

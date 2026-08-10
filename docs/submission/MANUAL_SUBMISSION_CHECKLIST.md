@@ -11,12 +11,12 @@
 - [x] Organizer evaluator ran on full-GT `T01-Sample`; evidence is at `artifacts/evaluation/`.
 - [x] Final report theo template BTC đã được cập nhật tại `docs/Automotive Hackthon - Final Vòng 2.docx.md`.
 - [x] Final deck has reviewed PPTX and PDF exports.
-- [x] Silent local FleetIQ dashboard demo recorded as `FleetIQ_Guardian_Round2_Demo.mp4` (04:08); captions and final-cut tasks are documented.
+- [x] Final captioned FleetIQ dashboard demo recorded as `FleetIQ_Guardian_Round2_Demo.mp4` (03:31).
 - [x] Ready-to-complete archive is at `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final_READY_FOR_UPLOAD.zip`.
 
 ## You Must Do
 
-1. Điền tên/email đại diện, video URL, evidence URL và timestamp thật trong report theo template BTC. Tên video đã giữ sẵn là `FleetIQ_Guardian_Round2_Demo.mp4`; mọi mốc `MỐC MOCK` phải được thay trước khi nộp.
+1. Điền tên/email đại diện, video URL, evidence URL và timestamp thật trong report theo template BTC. Tên video cuối là `FleetIQ_Guardian_Round2_Demo.mp4`.
 2. Keep the official folder as `predictions/UchiHahaha/`. Keep the files named exactly `T01d.csv` through `T10d.csv`.
 3. Re-run the validator immediately before upload:
 
@@ -24,7 +24,7 @@
    uv run python tools/dataset/validate_submission.py --predictions-dir predictions/UchiHahaha
    ```
 
-4. Add the CSV-validator segment and Vietnamese voice-over/subtitles to the recorded demo. Đi từ T01d score đến event timeline, road evidence, DMS/depth/telemetry đồng bộ, rồi CSV validator. Chỉ đưa CarSky vào video nếu nó chạy live.
+4. Upload the final captioned video and reviewer-accessible evidence folder. The video demonstrates T01d score, event timeline, synchronized road/DMS/depth/telemetry evidence, and coaching context. Chỉ đưa CarSky vào video nếu nó chạy live.
 5. Replace the target timestamps in the report with actual video timestamps.
 6. Create a reviewer-accessible evidence folder. Upload the final report, demo video, ten CSVs, screenshots or screen recording proof, validator output, model metrics, and source/build reference.
 7. Test the video URL and evidence-folder URL from an incognito/private browser where you are not logged in.

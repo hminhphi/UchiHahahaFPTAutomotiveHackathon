@@ -27,6 +27,8 @@ const C = {
   green: "22B573",
 };
 
+const DELIVERY_DECK = true;
+
 const pptx = new pptxgen();
 pptx.defineLayout({ name: "FLEETIQ", width: 13.333, height: 7.5 });
 pptx.layout = "FLEETIQ";
@@ -114,14 +116,14 @@ function source(slide, value, dark = false) {
     text(slide, item, { x: 7.95, y: y + 0.07, w: 3.6, h: 0.18, fontSize: 14, bold: true, color: C.white });
   });
   text(slide, "Nhóm UchiHahaha | Phi, Trung, Dũng, Kha, Tú", { x: 0.7, y: 6.18, w: 5.7, h: 0.16, fontSize: 10.5, bold: true, color: C.white });
-  source(slide, "Điểm theo rule luôn đi cùng event và bằng chứng; không được diễn giải là độ chính xác test ẩn.", true);
+  source(slide, "Challenge #3 · evidence-first driver intelligence.", true);
   footer(slide, 1, true);
 }
 
 // 02. Problem
 {
   const slide = pptx.addSlide();
-  heading(slide, 2, "Bài toán", "VIDEO THÔ KHÔNG TẠO RA QUYẾT ĐỊNH AN TOÀN", "Quản lý đội xe cần biết chuyến nào cần xem, vì sao và bằng chứng nằm ở đâu.");
+  heading(slide, 2, "Bài toán", "VIDEO THÔ KHÔNG TẠO RA QUYẾT ĐỊNH AN TOÀN", "Quản lý đội xe cần biết chuyến nào cần xem và vì sao.");
   iconCard(slide, "01", "DỮ LIỆU PHÂN MẢNH", "Road camera, DMS, độ sâu và telemetry đang ở các luồng độc lập.", 0.72, 2.04, 3.63, C.blue);
   iconCard(slide, "02", "CẢNH BÁO THIẾU NGỮ CẢNH", "Một giá trị TTC hay một ảnh đơn lẻ không nói lên toàn bộ sự kiện.", 4.84, 2.04, 3.63, C.orange);
   iconCard(slide, "03", "COACHING KHÓ KIỂM TRA", "Không có khung hình, thời điểm và lý do thì không thể coaching chính xác.", 8.96, 2.04, 3.63, C.green);
@@ -133,7 +135,7 @@ function source(slide, value, dark = false) {
 // 03. Product
 {
   const slide = pptx.addSlide();
-  heading(slide, 3, "Giải pháp", "MỘT LỚP HỢP NHẤT CHO ĐỘI XE", "FleetIQ Guardian dùng chấm điểm và TTC như động cơ để tạo quy trình cho Challenge #3.");
+  heading(slide, 3, "Giải pháp", "MỘT LỚP HỢP NHẤT CHO ĐỘI XE", "FleetIQ Guardian biến tín hiệu đa nguồn thành quyết định có thể hành động.");
   const engines = [
     ["01", "ĐỘNG CƠ HÀNH VI", "Tín hiệu attention, handling và làn đường được chuẩn hóa thành sự kiện.", C.blue],
     ["02", "ĐỘNG CƠ RỦI RO VA CHẠM", "Độ sâu, đối tượng dẫn đầu và telemetry tạo ngữ cảnh TTC/near-miss.", C.orange],
@@ -150,7 +152,7 @@ function source(slide, value, dark = false) {
 // 04. Dataset
 {
   const slide = pptx.addSlide();
-  heading(slide, 4, "Dữ liệu", "NĂM NHÓM TÍN HIỆU, MỘT DÒNG THỜI GIAN", "Chúng tôi khai thác toàn bộ dữ liệu starter kit thay vì chỉ trình diễn một mô hình đơn lẻ.");
+  heading(slide, 4, "Dữ liệu", "NĂM NHÓM TÍN HIỆU, MỘT DÒNG THỜI GIAN", "Các tín hiệu được đưa về cùng một dòng thời gian để tạo bối cảnh vận hành.");
   const sources = [
     ["CAMERA ĐƯỜNG", "Đối tượng và ngữ cảnh"],
     ["CAMERA TÀI XẾ", "Trạng thái attention"],
@@ -166,8 +168,8 @@ function source(slide, value, dark = false) {
     text(slide, body, { x: x + 0.21, y: 3.15, w: 1.75, h: 0.14, fontSize: 7.8, color: C.muted, align: "center", fit: "shrink" });
   });
   rect(slide, 0.7, 4.35, 11.86, 1.28, C.navy);
-  text(slide, "17.999", { x: 1.04, y: 4.72, w: 1.8, h: 0.38, fontSize: 28, bold: true, color: C.orange, align: "center" });
-  text(slide, "KHUNG HÌNH ĐƯỢC GẮN NHÃN", { x: 0.94, y: 5.18, w: 2, h: 0.12, fontSize: 7.4, bold: true, color: C.white, align: "center", fit: "shrink" });
+  text(slide, "10", { x: 1.04, y: 4.72, w: 1.8, h: 0.38, fontSize: 28, bold: true, color: C.orange, align: "center" });
+  text(slide, "TRIP REPLAYS", { x: 0.94, y: 5.18, w: 2, h: 0.12, fontSize: 7.4, bold: true, color: C.white, align: "center", fit: "shrink" });
   text(slide, "Dữ liệu đa nguồn cho phép chứng minh một sự kiện bằng nhiều góc nhìn, thay vì suy luận từ một tín hiệu duy nhất.", { x: 3.42, y: 4.82, w: 7.95, h: 0.32, fontSize: 13, bold: true, color: C.white, align: "center", fit: "shrink" });
   source(slide, "Starter kit: road stereo, driver camera, depth, calibration, telemetry, labels và fusion metadata.");
 }
@@ -175,12 +177,12 @@ function source(slide, value, dark = false) {
 // 05. Demo flow
 {
   const slide = pptx.addSlide();
-  heading(slide, 5, "Trải nghiệm", "MỞ TỪ HÀNG ĐỢI, KẾT THÚC Ở BẰNG CHỨNG", "Giao diện bắt đầu bằng công việc vận hành, không phải landing page.");
+  heading(slide, 5, "Trải nghiệm", "MỞ TỪ HÀNG ĐỢI, KẾT THÚC Ở BẰNG CHỨNG", "Quy trình review đi từ danh sách ưu tiên tới coaching.");
   const steps = [
-    ["01", "Chọn chuyến cần xem", "Mở điểm theo rule và bằng chứng liên kết."],
+    ["01", "Chọn chuyến cần xem", "Mở điểm an toàn và event liên kết."],
     ["02", "Mở timeline đồng bộ", "Road, driver, depth và telemetry cùng frame."],
     ["03", "Kiểm tra evidence", "Đối tượng, TTC, trạng thái tài xế và event."],
-    ["04", "Gán coaching", "Hành động cụ thể, có liên kết đến bằng chứng."],
+    ["04", "Giao coaching", "Hành động cụ thể, có liên kết đến bằng chứng."],
   ];
   steps.forEach(([number, title, body], index) => {
     const x = 0.72 + index * 3.02;
@@ -191,32 +193,32 @@ function source(slide, value, dark = false) {
     if (index < 3) line(slide, x + 2.64, 3.33, 0.3, 0, C.orange, true);
   });
   rect(slide, 0.72, 5.2, 11.86, 0.5, C.paleOrange, C.orange);
-  text(slide, "Điểm theo rule được tạo từ artifact chuyến; không dùng để tuyên bố độ chính xác hay xếp hạng fleet.", { x: 1, y: 5.36, w: 11.3, h: 0.13, fontSize: 10.5, bold: true, color: C.navy, align: "center" });
+  text(slide, "Mỗi bước đều mở được một evidence window để người vận hành kiểm tra và hành động.", { x: 1, y: 5.36, w: 11.3, h: 0.13, fontSize: 10.5, bold: true, color: C.navy, align: "center" });
 }
 
 // 06. Evidence
 {
   const slide = pptx.addSlide();
-  heading(slide, 6, "Bằng chứng", "MỘT KHUNG HÌNH, BỐN TÍN HIỆU CÓ THỂ KIỂM TRA", "Khung 1010 được đọc lại từ YOLOP overlay, artifact road/DMS/fusion và CSV sau full pipeline.");
+  heading(slide, 6, "Bằng chứng", "ĐIỀU GÌ ĐANG XẢY RA TRÊN ĐƯỜNG?", "Một event được kiểm tra từ road risk, driver attention và bối cảnh vận hành.");
   rect(slide, 0.7, 2.0, 7.35, 3.65, C.ink, C.ink);
   slide.addImage({ path: image.roadOverlay, x: 0.88, y: 2.19, w: 6.99, h: 3.28 });
-  label(slide, "T01D · FRAME 1010 · YOLOP OVERLAY", 2.05, 5.0, 4.65, C.blue);
+  rect(slide, 0.88, 5.02, 6.99, 0.45, C.ink);
   card(slide, 8.4, 2.0, 4.18, 1.0, C.orange);
-  text(slide, "ROAD / IN-LANE CAR", { x: 8.72, y: 2.27, w: 3.5, h: 0.18, fontSize: 11.2, bold: true, color: C.navy, fit: "shrink" });
-  text(slide, "20.40 m · TTC 1.601 s · confidence 0.8837", { x: 8.72, y: 2.58, w: 3.45, h: 0.14, fontSize: 8.8, color: C.muted, fit: "shrink" });
+  text(slide, "ROAD / XE PHÍA TRƯỚC", { x: 8.72, y: 2.27, w: 3.5, h: 0.18, fontSize: 11.2, bold: true, color: C.navy, fit: "shrink" });
+  text(slide, "20.40 m · TTC 1.601 s", { x: 8.72, y: 2.58, w: 3.45, h: 0.14, fontSize: 8.8, color: C.muted, fit: "shrink" });
   card(slide, 8.4, 3.18, 4.18, 1.0, C.blue);
-  text(slide, "DMS / DROWSY", { x: 8.72, y: 3.45, w: 3.5, h: 0.18, fontSize: 11.2, bold: true, color: C.navy, fit: "shrink" });
-  text(slide, "MediaPipe geometry · confidence 0.85", { x: 8.72, y: 3.76, w: 3.45, h: 0.14, fontSize: 8.8, color: C.muted, fit: "shrink" });
+  text(slide, "DMS / DRIVER DROWSY", { x: 8.72, y: 3.45, w: 3.5, h: 0.18, fontSize: 11.2, bold: true, color: C.navy, fit: "shrink" });
+  text(slide, "Trạng thái drowsy · confidence 85%", { x: 8.72, y: 3.76, w: 3.45, h: 0.14, fontSize: 8.8, color: C.muted, fit: "shrink" });
   card(slide, 8.4, 4.36, 4.18, 1.29, C.green);
-  text(slide, "FUSION / RISK INDEX 51.0", { x: 8.72, y: 4.62, w: 3.5, h: 0.18, fontSize: 11.2, bold: true, color: C.navy, fit: "shrink" });
-  text(slide, "TTC-risk + drowsiness + compound risk\nCSV: 1010, 50.500, 1.601, drowsy, 51.0", { x: 8.72, y: 4.91, w: 3.48, h: 0.32, fontSize: 8.1, color: C.muted, fit: "shrink" });
-  source(slide, "T01d/1010: road, DMS, fusion JSON; YOLOP overlay; predictions/UchiHahaha/T01d.csv.");
+  text(slide, "FUSION / RISK EVENT", { x: 8.72, y: 4.62, w: 3.5, h: 0.18, fontSize: 11.2, bold: true, color: C.navy, fit: "shrink" });
+  text(slide, "Compound risk · TTC ngắn · coaching trigger", { x: 8.72, y: 4.91, w: 3.48, h: 0.32, fontSize: 8.1, color: C.muted, fit: "shrink" });
+  source(slide, "Trip evidence view · synchronized event context.");
 }
 
 // 07. Timeline
 {
   const slide = pptx.addSlide();
-  heading(slide, 7, "Đồng bộ", "CÙNG MỘT KHUNG HÌNH, NHIỀU LỚP BẰNG CHỨNG", "Tính đồng bộ biến dòng thời gian thành công cụ kiểm tra thay vì tập ảnh rời rạc.");
+  heading(slide, 7, "Đồng bộ", "CÙNG MỘT KHUNG HÌNH, NHIỀU LỚP BẰNG CHỨNG", "Khi các tín hiệu cùng frame, reviewer thấy nguyên nhân và hành động.");
   const rows = [
     ["CAMERA ĐƯỜNG", C.blue, "Đối tượng trong làn · khoảng cách · TTC"],
     ["DMS", C.orange, "Trạng thái tài xế · độ tin cậy"],
@@ -231,10 +233,10 @@ function source(slide, value, dark = false) {
     text(slide, detail, { x: 10.55, y: y + 0.33, w: 1.55, h: 0.14, fontSize: 8, color: C.muted, fit: "shrink" });
   });
   line(slide, 6.95, 1.93, 0, 3.45, C.orange);
-  label(slide, "KHUNG 800", 6.31, 1.76, 1.28, C.orange);
+  label(slide, "SYNC FRAME", 6.31, 1.76, 1.28, C.orange);
   rect(slide, 2.58, 5.7, 9.5, 0.48, C.navy);
   text(slide, "KIỂM TRA THEO KHUNG HÌNH: chọn một sự kiện là mở đúng bối cảnh, không suy diễn từ thời điểm khác.", { x: 2.87, y: 5.86, w: 8.9, h: 0.12, fontSize: 8.8, bold: true, color: C.white, align: "center", fit: "shrink" });
-  source(slide, "T01d–T10d có 1.800 khung logic (0–1799); T08d/1615 là source road-left không khả dụng và được đánh dấu rõ.");
+  source(slide, "Road, DMS, depth và telemetry được mở theo cùng một frame.");
 }
 
 // 08. Architecture
@@ -268,9 +270,10 @@ function source(slide, value, dark = false) {
     text(slide, title, { x: x + 0.25, y: 5.1, w: 2.9, h: 0.16, fontSize: 10, bold: true, color: accent, align: "center", fit: "shrink" });
     text(slide, body, { x: x + 0.28, y: 5.45, w: 2.84, h: 0.12, fontSize: 8.3, color: C.muted, align: "center", fit: "shrink" });
   });
-  source(slide, "Đầu ra luôn liên kết event với điểm theo rule và khung hình nguồn; không diễn giải score là độ chính xác test ẩn.");
+  source(slide, "Signal flow: input → intelligence → evidence-linked coaching.");
 }
 
+if (!DELIVERY_DECK) {
 // 09. Event rules
 {
   const slide = pptx.addSlide();
@@ -367,10 +370,12 @@ function source(slide, value, dark = false) {
   source(slide, "UX theo bằng chứng: media thiếu được biểu diễn rõ; score luôn đi cùng rule, event và frame liên kết.");
 }
 
-// 13. Delivery
+}
+
+// 09. Delivery
 {
   const slide = pptx.addSlide();
-  heading(slide, 13, "Sẵn sàng trình diễn", "MỘT LUỒNG QUYẾT ĐỊNH HOÀN CHỈNH CHO FLEET MANAGER", "Từ chuyến cần xem đến coaching, mọi bước đều có ngữ cảnh để người vận hành hành động.");
+  heading(slide, 9, "Sẵn sàng trình diễn", "MỘT LUỒNG QUYẾT ĐỊNH HOÀN CHỈNH CHO FLEET MANAGER", "Từ chuyến cần xem đến coaching, mọi bước đều có ngữ cảnh để người vận hành hành động.");
   const columns = [
     ["MỞ", "Chọn đúng chuyến", "Dashboard hiển thị điểm theo rule và những event cần ưu tiên xem lại.", C.blue],
     ["KIỂM", "Xem đúng bối cảnh", "Timeline mở camera đường, DMS và telemetry tại cùng một khung hình.", C.orange],
@@ -388,7 +393,7 @@ function source(slide, value, dark = false) {
   source(slide, "Demo flow: dashboard → chuyến rủi ro → timeline → evidence → điểm theo rule → coaching.");
 }
 
-// 14. Close
+// 10. Close
 {
   const slide = pptx.addSlide();
   slide.background = { color: C.navy };
@@ -405,10 +410,10 @@ function source(slide, value, dark = false) {
   text(slide, "FLEETIQ GUARDIAN", { x: 7.58, y: 1.65, w: 4.1, h: 0.24, fontSize: 15, bold: true, color: C.orange, align: "center" });
   text(slide, "Giúp quản lý đội xe hiểu rủi ro trước khi họ phải xem hàng giờ video.", { x: 7.75, y: 2.4, w: 3.75, h: 0.58, fontSize: 18, bold: true, color: C.white, align: "center", fit: "shrink" });
   rect(slide, 7.8, 3.55, 3.68, 0.76, C.blue);
-  text(slide, "10 TRIP ANALYSIS\n1.800 FRAME / TRIP · EVENT REPLAY", { x: 8.02, y: 3.78, w: 3.24, h: 0.24, fontSize: 8.6, bold: true, color: C.white, align: "center", fit: "shrink" });
+  text(slide, "TRIP REPLAY\nEVIDENCE-LINKED COACHING", { x: 8.02, y: 3.78, w: 3.24, h: 0.24, fontSize: 8.6, bold: true, color: C.white, align: "center", fit: "shrink" });
   text(slide, "Cảm ơn", { x: 7.58, y: 4.85, w: 4.1, h: 0.28, fontSize: 22, bold: true, color: C.white, align: "center" });
-  source(slide, "Bản trình bày cuối | Claim được giới hạn bởi bằng chứng hiện có.", true);
-  footer(slide, 14, true);
+  source(slide, "FleetIQ Guardian · Challenge #3 · UchiHahaha.", true);
+  footer(slide, 10, true);
 }
 
 (async () => {

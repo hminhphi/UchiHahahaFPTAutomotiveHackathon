@@ -28,6 +28,14 @@ The canonical walkthrough is T01d frame `1010`, produced by the full pipeline:
 
 ![FleetIQ rule-based evidence architecture](docs/architecture/diagrams/12_rule_based_risk_architecture.png)
 
+![T01d frame 1010 road evidence](docs/proposal/assets/t01d-frame-1010-road-overlay.png)
+
+*Full-pipeline T01d frame 1010 preview: road object, depth-derived distance, and TTC overlay.*
+
+![FleetIQ Guardian dashboard](docs/proposal/assets/t01d-dashboard-final.png)
+
+*Final dashboard capture: trip score, component breakdown, and frame-linked events.*
+
 > [!IMPORTANT]
 > Trip safety scores are deterministic evidence scores. They are not fleet rankings,
 > fleet averages, blind-test accuracy, or organizer evaluation results. TTC uses a
@@ -38,11 +46,11 @@ The canonical walkthrough is T01d frame `1010`, produced by the full pipeline:
 
 | Deliverable | Location | Status |
 | --- | --- | --- |
-| Final report | [BTC template](docs/Automotive%20Hackthon%20-%20Final%20V%C3%B2ng%202.docx.md) | `v1.1.2`; contact and reviewer URLs still need final values |
-| Final deck | [PPTX](docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pptx) and [PDF](docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pdf) | Reviewed 14-slide pair |
+| Final report | [BTC template](docs/Automotive%20Hackthon%20-%20Final%20V%C3%B2ng%202.docx.md) | `v1.1.3`; contact and reviewer URLs still need final values |
+| Final deck | [PPTX](docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pptx) and [PDF](docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pdf) | Reviewed 10-slide delivery pair |
 | Prediction CSVs | `predictions/UchiHahaha/T01d.csv` through `T10d.csv` | Ten files regenerated and validator-ready |
-| Demo video | [Caption and narration map](docs/submission/DEMO_VIDEO_CAPTIONS.md) | Local 04:08 MP4 recorded; reviewer URL and CSV-validator segment remain pending |
-| Private upload packet | `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final_READY_FOR_UPLOAD.zip` | Local-only; refresh after adding the final MP4/URLs |
+| Demo video | `FleetIQ_Guardian_Round2_Demo.mp4` | Final captioned 03:31 video in the private packet; reviewer URL remains to be added |
+| Private upload packet | `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final_READY_FOR_UPLOAD.zip` | Local-only; add reviewer URLs before portal upload |
 
 ## Quick Start
 
@@ -67,12 +75,12 @@ uv run python tools/dataset/validate_submission.py --predictions-dir predictions
 
 ## Release
 
-`v1.1.2` is the final Round 2 source release. Public assets contain source,
+`v1.1.3` is the final Round 2 source release. Public assets contain source,
 documentation, and the final deck only. The private reviewer package contains local
 models and generated evidence and must not be published without organizer approval.
 
 ```powershell
-./tools/release/create_release_package.ps1 -Version v1.1.2 -PrivateReviewerHandoff
+./tools/release/create_release_package.ps1 -Version v1.1.3 -PrivateReviewerHandoff
 ```
 
 > [!CAUTION]
@@ -109,7 +117,7 @@ docker compose --profile full config
 
 | Area | Purpose |
 | --- | --- |
-| [Submission](docs/submission/README.md) | Report, video placeholder, checklist, and upload packet guidance |
+| [Submission](docs/submission/README.md) | Report, final video, checklist, and upload packet guidance |
 | [Proposal](docs/proposal/README.md) | Final judge-facing deck and export |
 | [Model provenance](docs/models/PROVENANCE_FINAL.md) | Runtime role and claim boundaries |
 | [Runbooks](docs/runbooks/README.md) | Regeneration, validation, and private handoff |

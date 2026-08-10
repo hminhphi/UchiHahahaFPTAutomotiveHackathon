@@ -3,8 +3,7 @@
 | Asset | Location |
 | --- | --- |
 | Final report theo template BTC | `../Automotive Hackthon - Final Vòng 2.docx.md` |
-| Demo-video placeholder and provisional edit map | `DEMO_VIDEO_PLACEHOLDER.md` |
-| Demo captions and narration | `DEMO_VIDEO_CAPTIONS.md` |
+| Final demo video | `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final/VIDEO/FleetIQ_Guardian_Round2_Demo.mp4` |
 | Manual actions | `MANUAL_SUBMISSION_CHECKLIST.md` |
 | Ready-to-complete archive | `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final_READY_FOR_UPLOAD.zip` |
 | Unpacked upload workspace | `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final/` |
@@ -16,6 +15,5 @@
 | Road video evidence | `artifacts/trips/<trip>/media/road_left/` |
 
 Trước khi upload, chạy validator lại một lần. Sau đó điền thông tin đội trưởng,
-video/evidence URL và timestamp thật vào report theo template BTC. Video local đã
-được ghi dưới tên `FleetIQ_Guardian_Round2_Demo.mp4`; thêm CSV-validator segment,
-voice-over/subtitles và thay mọi `MỐC MOCK` trước khi upload.
+video/evidence URL và timestamp thật vào report theo template BTC. Video cuối đã
+được caption và lưu dưới tên `FleetIQ_Guardian_Round2_Demo.mp4`.
