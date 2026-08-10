@@ -8,8 +8,10 @@ Owner: Whole team; each boundary README names its primary maintainer.
 | Area | Contents |
 | --- | --- |
 | [Architecture](architecture/README.md) | System, repository, and generated diagrams |
+| [Models](models/PROVENANCE_FINAL.md) | Final model roles, local artifact paths, and disclosure boundaries |
 | [Protocols](protocols/README.md) | HTTP, WebSocket, MQTT, events, and JSON schemas |
 | [Proposal](proposal/README.md) | Hackathon deck and exported proposal |
+| [Submission](submission/README.md) | Final report, packet checklist, and organizer-format predictions |
 | [Reference](reference/README.md) | Organizer and CarSky source material |
 | [Reports](reports/README.md) | Progress and evaluation reports |
 | [Runbooks](runbooks/README.md) | Local, CI, AWS, and CarSky operations |
@@ -18,3 +20,6 @@ Owner: Whole team; each boundary README names its primary maintainer.
 
 Commit authored documentation and approved proposal artifacts. Do not commit
 credentials, datasets, raw model outputs, or generated render intermediates.
+
+Historical v1.0.0 release notes and onboarding material are archived under
+`docs/archive/`; they are not the final Round 2 reviewer path.

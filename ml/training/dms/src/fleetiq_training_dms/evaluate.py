@@ -1,7 +1,6 @@
 """Evaluation script for Driver Sequence Model (Solution 2 Bi-LSTM)."""
 
 import sys
-from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd

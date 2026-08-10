@@ -82,7 +82,7 @@ export interface FusionFrameAnalysis {
 export interface FusionTripSummary {
   tripId: string;
   producer: "fusion-worker";
-  safetyScore: number;
+  safetyScore: number | null;
   componentSafetyScores: {
     road: number | null;
     dms: number | null;

@@ -21,7 +21,10 @@ export default async function TripPage({
     getTripEventMarkers(decodedTripId),
     getTripFusionSummary(decodedTripId),
   ]);
-  const trip = getTrip(decodedTripId, fleetTrips);
+  const baseTrip = getTrip(decodedTripId, fleetTrips);
+  const trip = fusionSummary?.safetyScore == null
+    ? baseTrip
+    : { ...baseTrip, score: Math.round(fusionSummary.safetyScore) };
   const localEvidence = buildTripEvidence(trajectory);
   const events = eventMarkers.length ? eventMarkers.map((event) => {
     const point = trajectory?.points.find((candidate) => candidate.frameIndex === event.frameIndex);
@@ -43,7 +46,11 @@ export default async function TripPage({
           <h1>Trip report <span>/ {trip.tripId}</span></h1>
           <p>Completed trip replay with auditable road risk, vehicle state, and coaching evidence.</p>
         </div>
-        <div className={`risk-stamp severity-${trip.severity}`}><span>Current risk</span><strong>{trip.severity}/5</strong><small>Safety score {trip.score}</small></div>
+          <div className={`risk-stamp severity-${trip.severity ?? "unscored"}`}>
+          <span>{trip.score === null ? "Analysis status" : "Rule score"}</span>
+          <strong>{trip.score === null ? "Pending" : `${trip.score}/100`}</strong>
+          <small>{trip.score === null ? "Artifact processing" : "RiskScorer v1 · evidence score"}</small>
+        </div>
       </div>
 
       <TripOperationsView trip={trip} operations={operations} trajectory={trajectory} roadVideo={roadVideo} events={events} scoreSignals={scoreSignals} />

@@ -218,29 +218,36 @@ export async function getFleetTrips(): Promise<FleetTrip[]> {
     const response = await fetch(`${API_BASE_URL}/api/v1/trips`, { cache: "no-store" });
     if (!response.ok) throw new Error("Fleet API unavailable");
     const envelope = (await response.json()) as TripEnvelope;
-    if (!envelope.data.items.length) return demoTrips;
+    if (!envelope.data.items.length) return [];
     return envelope.data.items.map((trip, index) => ({
       tripId: trip.trip_id,
       driverName: `Driver ${String.fromCharCode(65 + index)}`,
       vehicleId: `VH-${String(index + 1).padStart(2, "0")}`,
-      score: trip.safety_score ?? (trip.status === "failed" ? 55 : 85),
-      severity: trip.severity ?? (trip.status === "failed" ? 4 : 2),
-      latestAlert: trip.latest_alert ?? (trip.status === "failed" ? "Analysis failed" : "Awaiting fused events"),
+      // Artifact scores are not fleet-validated yet, so they must not be ranked or averaged.
+      score: null,
+      severity: null,
+      latestAlert: trip.latest_alert ?? "Awaiting validated analysis",
       speedMps: (trip.max_speed_kmh ?? 0) / 3.6,
       ttcS: null,
       driverState: normalizeDriverState(trip.driver_state),
       modelStatus: trip.status === "failed" ? "degraded" : trip.status === "complete" ? "precomputed" : "reference",
     }));
   } catch {
-    return demoTrips;
+    return [];
   }
 }
 
 export function getTrip(tripId: string, trips: FleetTrip[]): FleetTrip {
   return trips.find((trip) => trip.tripId === tripId) ?? {
-    ...demoTrips[0],
     tripId,
+    driverName: "Unavailable",
+    vehicleId: "Unavailable",
+    score: null,
+    severity: null,
     latestAlert: "Trip data unavailable",
+    speedMps: 0,
+    ttcS: null,
+    driverState: "unknown",
     modelStatus: "degraded",
   };
 }

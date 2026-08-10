@@ -25,6 +25,7 @@ function Follower({ tripId, view, label, frameIndex, dmsAnalysis }: { tripId: st
   const [failedSource, setFailedSource] = useState<string | null>(null);
   useEffect(() => setFailedSource(null), [source]);
   const unavailable = source === null || failedSource === source;
+  const driverState = dmsAnalysis?.driver_state;
   return (
     <section className="follower-panel">
       <header><span>{label}</span><small>{frameIndex === null ? "Waiting" : `Frame ${frameIndex}`}</small></header>
@@ -34,6 +35,12 @@ function Follower({ tripId, view, label, frameIndex, dmsAnalysis }: { tripId: st
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={source} alt={`${label} at frame ${frameIndex}`} onError={() => setFailedSource(source)} />
           {view === "driver" ? <DmsAnalysisOverlay analysis={dmsAnalysis} /> : null}
+        </div>
+      ) : view === "driver" && driverState ? (
+        <div className="follower-dms-state">
+          <strong>DMS: {driverState.state}</strong>
+          <span>{dmsAnalysis?.producer} · {(driverState.confidence * 100).toFixed(0)}% confidence</span>
+          <small>Driver image is unavailable at frame {frameIndex}; analysis remains available.</small>
         </div>
       ) : <p>{frameIndex === null ? "Waiting for road-left playback" : `Unavailable at frame ${frameIndex}`}</p>}
     </section>

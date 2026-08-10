@@ -1,7 +1,7 @@
 from fleetiq_api.trip_summary import build_trip_summary
 
 
-def test_trip_summary_scores_organizer_aggregate_with_explicit_penalties() -> None:
+def test_trip_summary_exposes_organizer_evidence_without_an_unvalidated_score() -> None:
     summary = build_trip_summary(
         "T01-Sample",
         {
@@ -20,8 +20,8 @@ def test_trip_summary_scores_organizer_aggregate_with_explicit_penalties() -> No
         },
     )
 
-    assert summary.safety_score == 84
-    assert summary.severity == 4
+    assert summary.safety_score is None
+    assert summary.severity is None
     assert summary.driver_state == "attentive"
     assert summary.max_speed_kmh == 34.4
     assert summary.latest_alert == "2 near-miss event(s) in organizer telemetry"

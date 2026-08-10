@@ -18,10 +18,9 @@ import cv2
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT / "services/roadface-worker/src"))
 
-from fleetiq_data import DatasetPaths, resolve_trip
-from fleetiq_roadface.pipeline import PipelineOptions, RoadfacePipeline
-from fleetiq_roadface.rendering import draw_overlay
-from fleetiq_roadface.yolo_detector import YoloDetector
+from fleetiq_data import DatasetPaths, resolve_trip  # noqa: E402
+from fleetiq_roadface.rendering import draw_overlay  # noqa: E402
+from fleetiq_roadface.yolo_detector import YoloDetector  # noqa: E402
 
 
 DATASET_ROOT = ROOT / "data/Hackathon_Dataset_Redacted/Hackathon_Dataset_Redacted"
@@ -71,21 +70,6 @@ def main() -> None:
 
     dataset = DatasetPaths(DATASET_ROOT)
     trip = resolve_trip(dataset, args.trip)
-
-    pipeline = RoadfacePipeline(
-        dataset_paths=dataset,
-        output_root=ROOT / "artifacts/predictions/roadface/yolo_window",
-        detector=detector,
-        depth_model=None,
-    )
-
-    options = PipelineOptions(
-        detector_source="model",
-        depth_source=args.depth_source,
-        lane_method="classical",
-        lane_filter=not args.no_lane,
-        visualize=False,  # we render manually for window display
-    )
 
     # Load trip frames to iterate
     from fleetiq_data import load_trip_document, find_frame

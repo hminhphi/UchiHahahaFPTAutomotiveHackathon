@@ -42,7 +42,7 @@ def main() -> None:
         trip_dir = HACKATHON_ROOT / trip_id
         json_path = trip_dir / f"{trip_id}.json.gz"
         if not json_path.is_file():
-            print(f"  SKIP: no JSON.gz found")
+            print("  SKIP: no JSON.gz found")
             continue
 
         data = json.loads(gzip.decompress(json_path.read_bytes()))
@@ -100,9 +100,6 @@ def main() -> None:
         trip_data = {
             "trip_id": trip_id,
             "status": "complete",
-            "safety_score": 75,
-            "severity": 3,
-            "latest_alert": "Detached trip — YOLOv26 inference active",
             "driver_state": "unknown",
             "max_speed_kmh": round(max_speed, 1),
             "trajectory": {

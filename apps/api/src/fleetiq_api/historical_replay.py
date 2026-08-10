@@ -43,9 +43,15 @@ class TripMediaStore(Protocol):
 
 
 class FilesystemTripMediaStore:
-    def __init__(self, root: Path, prediction_root: Path | None = None) -> None:
+    def __init__(
+        self,
+        root: Path,
+        prediction_root: Path | None = None,
+        artifact_root: Path | None = None,
+    ) -> None:
         self._root = root
         self._prediction_root = prediction_root
+        self._artifact_root = artifact_root
 
     async def list_trip_ids(self) -> tuple[str, ...]:
         return await asyncio.to_thread(self._list_trip_ids)
@@ -80,7 +86,16 @@ class FilesystemTripMediaStore:
         return await asyncio.to_thread(Path(frame.location).read_bytes)
 
     async def read_trip_document(self, trip_id: str) -> dict[str, object]:
-        path = self._root / trip_id / f"{trip_id}.json.gz"
+        artifact_path = (
+            self._artifact_root / trip_id / f"{trip_id}.json.gz"
+            if self._artifact_root is not None
+            else None
+        )
+        path = (
+            artifact_path
+            if artifact_path is not None and artifact_path.is_file()
+            else self._root / trip_id / f"{trip_id}.json.gz"
+        )
         document = await asyncio.to_thread(_read_trip_document, path.read_bytes())
         if self._prediction_root is None:
             return document
@@ -343,9 +358,13 @@ def create_historical_dependencies(
         )
         media = S3TripMediaStore(settings, artifact_root)
     else:
+        artifact_root = Path(
+            __import__("os").environ.get("FLEETIQ_ARTIFACTS_ROOT", "artifacts/trips")
+        )
         media = FilesystemTripMediaStore(
             settings.dataset_root,
             settings.dms_prediction_root,
+            artifact_root,
         )
     trips = HistoricalTripRepository(media)
     return (

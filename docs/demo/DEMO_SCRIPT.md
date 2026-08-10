@@ -1,19 +1,20 @@
 # Three-Minute Demo Script
 
-## 0:00-0:20 - Fleet Priority
+## 0:00-0:20 - Evidence Review
 
 Open `http://localhost:3000`. Explain that FleetIQ Guardian is a remote fleet
-intelligence layer: it ranks past or live trips, provides timestamped evidence,
-and turns a risky moment into a bounded coaching action. Open `T01-Sample`.
+intelligence layer: it identifies completed trips for review, provides
+timestamped evidence, and turns a risky moment into a bounded coaching action.
+Open `T01d`. Do not call the deterministic trip score a fleet ranking.
 
 ## 0:20-1:10 - Synchronized Evidence
 
 Point to the road-facing replay and the telemetry cards. Explain that the data
-is one historical organizer trip stored in MinIO, not a browser fixture. Use a
-risk-event chip to pause and jump directly to its evidence frame, then scrub a
-few frames around it. The player can enter full screen for incident review. As
-the selected frame changes, speed, longitudinal and lateral acceleration, DMS
-state, and the route marker update from the same trajectory index.
+is a precomputed organizer-trip artifact served by the Docker stack. Use an
+event chip to jump directly to its evidence frame, then scrub a few frames
+around it. As the selected frame changes, speed, longitudinal and lateral
+acceleration, DMS state, and the route marker update from the same trajectory
+index.
 
 Call out the TTC card carefully: `No valid TTC` is a correct result when no
 target is in the simulator collision cone. Do not substitute a TTC from an
@@ -30,12 +31,14 @@ filtered harsh-brake and fast-corner contexts.
 
 ## 1:55-2:35 - Explainability and Coaching
 
-Show the evidence queue, timeline, and coaching card. Explain that each shown
-item is derived from a frame-level telemetry measurement and retains its frame,
-time, source, and severity. A score-signal that has no source data displays as
-`N/A`; the demo does not fabricate lane or distance evidence. The current local
-CarSky bridge is a clearly labelled mock acknowledgement path; it never
-commands steering, braking, or throttle.
+Show the rule-score card, evidence queue, timeline, and coaching card. Explain
+that the score is a deterministic trip-level evidence score. Each shown item
+retains its frame, time, source, and severity. DMS events require a stable
+15-frame state and repeated states are consolidated within five seconds. A
+score-signal that has no source data displays as `N/A`; the demo does not
+fabricate lane or distance evidence. The current local CarSky bridge is a
+clearly labelled mock acknowledgement path; it never commands steering, braking,
+or throttle.
 
 ## 2:35-3:00 - Architecture and Reliability
 

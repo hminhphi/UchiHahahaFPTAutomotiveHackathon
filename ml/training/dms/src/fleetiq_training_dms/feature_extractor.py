@@ -12,6 +12,7 @@ from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision
 
 from fleetiq_training_dms.config import Config
+from fleetiq_training_dms.pseudo_labels import normalize_pose_angle
 
 # -----------------------------------------------------------------------------
 # LANDMARK MEASUREMENT FUNCTIONS
@@ -78,6 +79,7 @@ def estimate_head_pose_pnp(landmarks_6p: np.ndarray, img_w: int, img_h: int) -> 
 # MEDIAPIPE FACE LANDMARKER INITIALIZATION
 # -----------------------------------------------------------------------------
 MODEL_PATH = Config.OUTPUT_DIR / "face_landmarker.task"
+DMS_SMOOTHING_WINDOW_FRAMES = 15
 
 def init_landmarker():
     """Initialize MediaPipe FaceLandmarker Task API."""
@@ -144,6 +146,7 @@ def extract_features_from_trip(trip_dir: str | Path, landmarker=None, is_train: 
         motion_mean = 0.0
         motion_std = 0.0
         brightness_mean = 0.0
+        face_detected = False
 
         ear_val = last_known_ear
         mar_val = last_known_mar
@@ -170,6 +173,7 @@ def extract_features_from_trip(trip_dir: str | Path, landmarker=None, is_train: 
                 res = landmarker.detect(mp_image)
 
                 if res.face_landmarks and len(res.face_landmarks) > 0:
+                    face_detected = True
                     lm = res.face_landmarks[0]
                     coords = np.array([(p.x * w, p.y * h) for p in lm])
 
@@ -182,6 +186,9 @@ def extract_features_from_trip(trip_dir: str | Path, landmarker=None, is_train: 
 
                     pnp_points = coords[[1, 152, 33, 263, 61, 291]]
                     pitch_val, yaw_val, roll_val = estimate_head_pose_pnp(pnp_points, w, h)
+                    pitch_val = normalize_pose_angle(pitch_val)
+                    yaw_val = normalize_pose_angle(yaw_val)
+                    roll_val = normalize_pose_angle(roll_val)
 
                     last_known_ear = ear_val
                     last_known_mar = mar_val
@@ -203,6 +210,7 @@ def extract_features_from_trip(trip_dir: str | Path, landmarker=None, is_train: 
             "brightness": brightness_mean,
             "motion_mean": motion_mean,
             "motion_std": motion_std,
+            "face_detected": face_detected,
             "state_label": state_label,
         }
         records.append(row)
@@ -216,12 +224,14 @@ def extract_features_from_trip(trip_dir: str | Path, landmarker=None, is_train: 
     df["delta_yaw"] = df["yaw"].diff().fillna(0.0)
     df["delta_roll"] = df["roll"].diff().fillna(0.0)
 
-    # Rolling statistics
-    df["ear_mean_5"] = df["ear"].rolling(window=5, min_periods=1).mean()
-    df["ear_std_5"] = df["ear"].rolling(window=5, min_periods=1).std().fillna(0.0)
-    df["mar_mean_5"] = df["mar"].rolling(window=5, min_periods=1).mean()
-    df["pitch_mean_5"] = df["pitch"].rolling(window=5, min_periods=1).mean()
-    df["yaw_mean_5"] = df["yaw"].rolling(window=5, min_periods=1).mean()
+    # Keep the existing feature schema while smoothing runtime DMS signals over 15 frames.
+    df["ear_mean_5"] = df["ear"].rolling(window=DMS_SMOOTHING_WINDOW_FRAMES, min_periods=1).mean()
+    df["ear_std_5"] = df["ear"].rolling(window=DMS_SMOOTHING_WINDOW_FRAMES, min_periods=1).std().fillna(0.0)
+    df["mar_mean_5"] = df["mar"].rolling(window=DMS_SMOOTHING_WINDOW_FRAMES, min_periods=1).mean()
+    df["pitch_mean_5"] = df["pitch"].rolling(window=DMS_SMOOTHING_WINDOW_FRAMES, min_periods=1).mean()
+    df["yaw_mean_5"] = df["yaw"].rolling(window=DMS_SMOOTHING_WINDOW_FRAMES, min_periods=1).mean()
+    closed = (df["ear"] < 0.21).where(df["face_detected"])
+    df["perclos"] = closed.rolling(window=20, min_periods=1).mean()
 
     return df
 

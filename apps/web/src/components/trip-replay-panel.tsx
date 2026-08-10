@@ -54,7 +54,7 @@ export function TripReplayPanel({ tripId, trajectory, evidence, roadVideo, curre
           <ReplaySignal label="Current speed" value={point ? `${point.speedKmh.toFixed(0)} km/h` : "-- km/h"} detail="Organizer ego telemetry" tone="blue" />
           <ReplaySignal label="Longitudinal accel" value={point ? `${point.longitudinalAccelMps2.toFixed(2)} m/s2` : "-- m/s2"} detail={handlingDetail(point, "longitudinal")} tone="warning" />
           <ReplaySignal label="Lateral accel" value={point ? `${point.lateralAccelMps2.toFixed(2)} m/s2` : "-- m/s2"} detail={handlingDetail(point, "lateral")} tone="warning" />
-          <ReplaySignal label="FleetIQ risk" value={fusionAnalysis ? `${fusionAnalysis.risk_index.toFixed(0)}/100` : "N/A"} detail={fusionAnalysis ? `Safety ${fusionAnalysis.safety_score}/100 · ${fusionAnalysis.producer}` : "Precomputed fusion unavailable"} tone="warning" />
+          <ReplaySignal label="Fused analysis" value={fusionAnalysis ? "Ready" : "N/A"} detail={fusionAnalysis ? `${fusionAnalysis.producer} · rule score ready` : "Precomputed fusion unavailable"} tone="blue" />
           <ReplaySignal label="Object TTC" value={ttcValue(roadAnalysis)} detail={ttcDetail(roadAnalysis)} tone="warning" />
           <ReplaySignal label="Driver state" value={dmsAnalysis?.driver_state?.state ?? "unknown"} detail={driverDetail(dmsAnalysis)} tone="blue" />
         </aside>

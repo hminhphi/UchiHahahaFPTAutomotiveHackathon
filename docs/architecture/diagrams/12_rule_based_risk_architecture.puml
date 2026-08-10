@@ -1,0 +1,58 @@
+@startuml
+!theme plain
+left to right direction
+title FleetIQ Guardian - Kiến trúc Risk Score Theo Luật
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+skinparam componentStyle rectangle
+
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #19226D
+  FontColor #000000
+}
+
+package "Đầu vào và nguồn thực tế" {
+  rectangle "Camera đường\nlabel2_yolo_v3\nCustom YOLO v3 đã tiền xử lý" as Road #EAF2FF
+  rectangle "Depth map + calibration\nGT depth ROI\nkhông phải model học máy" as Depth #EAF2FF
+  rectangle "Camera tài xế\nDMS artifact / pseudo-label hình học\ncheckpoint sequence là artifact riêng" as Dms #EAF2FF
+  rectangle "Telemetry organizer\ntốc độ, gia tốc dọc/ngang" as Telemetry #EAF2FF
+}
+
+rectangle "Cổng chất lượng object\nbbox rộng > 30 px\nbbox cao > 30 px" as BoxGate #FFF7EE
+rectangle "Gắn ego lane\n>= 50% bbox chồng\ncorridor x = 250..390" as LaneGate #FFF7EE
+rectangle "Road context\nchỉ object trong ego lane\nGT-depth ROI -> TTC" as RoadRisk #F37021
+rectangle "DMS state\nattentive / distracted / drowsy" as DmsRisk #F37021
+rectangle "Handling rules\n60 km/h, |a_doc| >= 4\n|a_ngang| >= 3" as TelemetryRisk #F37021
+
+rectangle "RiskScorer v1\nrisk = collision + attention\n+ handling + lane\nscore = 100 - risk" as Scorer #034EA2
+rectangle "Rule-based event codes\nshort_ttc, distraction, speeding\nharsh accel, lane, compound" as Events #FFFFFF
+rectangle "Coaching labels\n12 event-specific rules\nchannel theo severity" as Coaching #FFFFFF
+rectangle "Artifact + API\nframe replay, evidence navigation\nrisk score, event log" as Output #EAF2FF
+
+Road --> BoxGate
+BoxGate --> LaneGate
+LaneGate --> RoadRisk : chỉ in-lane
+Depth --> RoadRisk
+Dms --> DmsRisk
+Telemetry --> TelemetryRisk
+RoadRisk --> Scorer
+DmsRisk --> Scorer
+TelemetryRisk --> Scorer
+Scorer --> Events
+Events --> Coaching
+Events --> Output
+Scorer --> Output
+
+note bottom of Scorer
+Collision: TTC <1,5 / <2,5 / <4 s
+Attention: drowsy 25, distracted/phone 15
+Handling: speeding 5-15, harsh accel 10
+Compound: collision + attention tang severity 1 cap 5
+end note
+
+@enduml

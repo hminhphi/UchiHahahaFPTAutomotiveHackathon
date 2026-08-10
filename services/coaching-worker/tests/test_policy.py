@@ -32,3 +32,13 @@ def test_critical_coaching_is_short_and_immediate() -> None:
 
 def test_low_risk_does_not_interrupt_driver() -> None:
     assert CoachingPolicy().command_for(risk(1), vehicle_id="vehicle-1") is None
+
+
+def test_event_type_selects_a_specific_rule_based_coaching_label() -> None:
+    event = risk(4).model_copy(update={"event_type": "harsh_longitudinal_accel"})
+
+    command = CoachingPolicy().command_for(event, vehicle_id="vehicle-1")
+
+    assert command is not None
+    assert command.title == "Braking coaching"
+    assert command.message == "Brake more smoothly."

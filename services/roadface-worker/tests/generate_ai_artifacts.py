@@ -5,12 +5,35 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
-import math
-import os
 import sys
 from pathlib import Path
 
 import numpy as np
+from fleetiq_fusion.scoring import RiskScorer
+
+MIN_BOX_DIMENSION_PX = 30.0
+EGO_LANE_X_MIN = 250.0
+EGO_LANE_X_MAX = 390.0
+ROAD_SPEED_LIMIT_KMH = 60.0
+EVENT_MERGE_GAP_FRAMES = 10
+DMS_EVENT_MIN_FRAMES = 15
+DMS_REPEAT_SUPPRESSION_FRAMES = 100  # Five seconds at the 20 FPS trip timeline.
+DMS_EVENT_CODES = ("phone_use", "driver_drowsiness", "driver_distraction")
+
+EVENT_TITLES = {
+    "compound_risk": "Compound road and driver risk",
+    "short_ttc": "Short TTC detected",
+    "high_ttc_risk": "High TTC risk detected",
+    "moderate_ttc_risk": "Moderate TTC risk detected",
+    "driver_drowsiness": "Driver drowsiness detected",
+    "driver_distraction": "Driver distraction detected",
+    "phone_use": "Phone use detected",
+    "speeding": "Speeding detected",
+    "harsh_longitudinal_accel": "Harsh longitudinal acceleration",
+    "harsh_lateral_accel": "Harsh lateral acceleration",
+    "lane_departure": "Lane departure detected",
+    "lane_drift": "Lane drift detected",
+}
 
 
 def load_depth_for_frame(trip_dir: Path, frame_idx: int) -> np.ndarray | None:
@@ -62,6 +85,8 @@ def parse_kitti_label(path: Path) -> list[dict]:
                 "x2": float(parts[6]),
                 "y2": float(parts[7]),
             }
+            if obj["x2"] - obj["x1"] <= MIN_BOX_DIMENSION_PX or obj["y2"] - obj["y1"] <= MIN_BOX_DIMENSION_PX:
+                continue
             if len(parts) >= 16:
                 obj["h"] = float(parts[8])
                 obj["w"] = float(parts[9])
@@ -104,12 +129,21 @@ def compute_risk_level(ego_speed_kmh: float, distance_m: float | None, ttc_s: fl
     return "none"
 
 
+def is_in_ego_lane(x1: float, x2: float) -> bool:
+    """Keep objects whose box overlaps the calibrated ego-lane corridor by half."""
+    width = max(0.0, x2 - x1)
+    overlap = max(0.0, min(x2, EGO_LANE_X_MAX) - max(x1, EGO_LANE_X_MIN))
+    return width > 0 and overlap / width >= 0.5
+
+
 def generate_road_frame(frame_idx: int, kitti_objects: list[dict], ego_speed_kmh: float,
-                         depth: np.ndarray | None = None) -> dict:
+                          depth: np.ndarray | None = None) -> dict:
     detections = []
     in_lane_count = 0
     min_ttc = None
     for i, obj in enumerate(kitti_objects):
+        if not is_in_ego_lane(obj["x1"], obj["x2"]):
+            continue
         # LocateAnything labels are 2D-only (z=-1000 sentinel). On scored trips
         # KITTI 3D z is also zeroed. Use depth map as the distance source.
         distance: float | None = None
@@ -130,12 +164,9 @@ def generate_road_frame(frame_idx: int, kitti_objects: list[dict], ego_speed_kmh
                 distance_confidence = 0.95
         ttc = compute_ttc(ego_speed_kmh, distance)
         risk = compute_risk_level(ego_speed_kmh, distance, ttc)
-        x_center = (obj["x1"] + obj["x2"]) / 2.0
-        is_in_lane = 250 <= x_center <= 390
-        if is_in_lane:
-            in_lane_count += 1
-            if min_ttc is None or (ttc is not None and ttc < min_ttc):
-                min_ttc = ttc
+        in_lane_count += 1
+        if min_ttc is None or (ttc is not None and ttc < min_ttc):
+            min_ttc = ttc
         detections.append({
             "track_id": str(i + 1),
             "label": obj["type"],
@@ -152,7 +183,7 @@ def generate_road_frame(frame_idx: int, kitti_objects: list[dict], ego_speed_kmh
             "ttc_s": ttc,
             "distance_confidence": distance_confidence,
             "distance_source": distance_source,
-            "lane_relation": "in_lane" if is_in_lane else "adjacent",
+            "lane_relation": "in_lane",
             "risk_level": risk,
         })
     return {
@@ -204,55 +235,41 @@ def generate_dms_frame(frame_idx: int, trajectory_dms: list[dict] | None, frame_
 
 
 def generate_fusion_frame(frame_idx: int, road: dict, dms: dict, telemetry: dict | None) -> dict:
-    road_risk = 0.0
-    for det in road.get("detections", []):
-        ttc = det.get("ttc_s")
-        if ttc:
-            if ttc < 1.5:
-                road_risk = max(road_risk, 95.0)
-            elif ttc < 2.5:
-                road_risk = max(road_risk, 70.0)
-            elif ttc < 4.0:
-                road_risk = max(road_risk, 40.0)
-
-    speed_kmh = telemetry.get("speed_kmh", 0) if telemetry else 0
-    speed_risk = min(100.0, max(0.0, (speed_kmh - 60.0) * 1.5))
-
+    in_lane_ttc = [
+        detection["ttc_s"]
+        for detection in road.get("detections", [])
+        if detection.get("lane_relation") == "in_lane" and detection.get("ttc_s") is not None
+    ]
     dms_state = (dms.get("driver_state") or {}).get("state", "unknown")
-    dms_risk = 0.0
-    if dms_state == "drowsy":
-        dms_risk = 80.0
-    elif dms_state == "distracted":
-        dms_risk = 60.0
-    elif dms_state == "attentive":
-        dms_risk = 10.0
-
+    if dms_state not in {"attentive", "distracted", "drowsy", "unknown"}:
+        dms_state = "unknown"
+    telemetry = telemetry or {}
+    score = RiskScorer().score(
+        ttc_s=min(in_lane_ttc) if in_lane_ttc else None,
+        driver_state=dms_state,
+        speed_mps=float(telemetry.get("speed_kmh", 0) or 0) / 3.6,
+        speed_limit_mps=ROAD_SPEED_LIMIT_KMH / 3.6,
+        longitudinal_accel_mps2=telemetry.get("longitudinal_accel_mps2"),
+        lateral_accel_mps2=telemetry.get("lateral_accel_mps2"),
+        lane_offset_m=None,
+    )
     components = {
-        "road": road_risk,
-        "dms": dms_risk,
-        "telemetry": speed_risk,
-        "lane": 0.0,
+        "road": score.penalties["collision"],
+        "dms": score.penalties["attention"],
+        "telemetry": score.penalties["handling"],
+        "lane": score.penalties["lane"],
     }
-    risk_index = max(components.values())
-    severity = 1
-    if risk_index > 80:
-        severity = 5
-    elif risk_index > 60:
-        severity = 4
-    elif risk_index > 40:
-        severity = 3
-    elif risk_index > 20:
-        severity = 2
-
-    safety_score = max(0.0, 100.0 - risk_index)
+    risk_index = 100.0 - score.score
 
     return {
         "frame_index": frame_idx,
         "producer": "fusion-worker",
         "risk_index": risk_index,
-        "safety_score": safety_score,
-        "severity": severity,
+        "safety_score": score.score,
+        "severity": score.severity,
         "components": components,
+        "event_codes": score.explanation_codes,
+        "rule_version": "risk-scorer-v1",
         "provenance": {
             "road_analyzed": len(road.get("detections", [])) > 0,
             "dms_analyzed": dms_state != "unknown",
@@ -263,7 +280,7 @@ def generate_fusion_frame(frame_idx: int, road: dict, dms: dict, telemetry: dict
 
 def generate_trip_summary(trip_id: str, frame_analyses: list[dict]) -> dict:
     if not frame_analyses:
-        return {"tripId": trip_id, "producer": "fusion-worker", "safetyScore": 80, "componentSafetyScores": {"road": None, "dms": None, "telemetry": None, "lane": None}}
+        return {"tripId": trip_id, "producer": "fusion-worker", "riskScore": 0, "safetyScore": 100, "componentSafetyScores": {"road": None, "dms": None, "telemetry": None, "lane": None}, "eventCounts": {}, "ruleVersion": "risk-scorer-v1"}
 
     avg_road = sum(f["components"].get("road", 0) for f in frame_analyses) / len(frame_analyses)
     avg_dms = sum(f["components"].get("dms", 0) for f in frame_analyses) / len(frame_analyses)
@@ -271,19 +288,133 @@ def generate_trip_summary(trip_id: str, frame_analyses: list[dict]) -> dict:
     avg_lane = sum(f["components"].get("lane", 0) for f in frame_analyses) / len(frame_analyses)
 
     avg_risk = sum(f["risk_index"] for f in frame_analyses) / len(frame_analyses)
-    safety_score = max(0.0, 100.0 - avg_risk)
+    event_counts: dict[str, int] = {}
+    for frame in frame_analyses:
+        for event_code in frame.get("event_codes", []):
+            event_counts[event_code] = event_counts.get(event_code, 0) + 1
 
     return {
         "tripId": trip_id,
         "producer": "fusion-worker",
-        "safetyScore": round(safety_score, 1),
+        "riskScore": round(avg_risk, 1),
+        "safetyScore": round(100.0 - avg_risk, 1),
         "componentSafetyScores": {
             "road": round(100.0 - avg_road, 1),
             "dms": round(100.0 - avg_dms, 1),
             "telemetry": round(100.0 - avg_telemetry, 1),
             "lane": round(100.0 - avg_lane, 1),
         },
+        "eventCounts": event_counts,
+        "ruleVersion": "risk-scorer-v1",
     }
+
+
+def generate_event_log(trip_id: str, frame_analyses: list[dict]) -> list[dict]:
+    """Merge sustained per-frame rule codes into navigable evidence windows."""
+    active: dict[str, dict] = {}
+    events = _generate_dms_event_log(trip_id, frame_analyses)
+
+    def close(code: str) -> None:
+        window = active.pop(code)
+        events.append({
+            "event_id": f"{trip_id}.{code}.{window['start_frame_index']}",
+            "trip_id": trip_id,
+            "frame_index": window["start_frame_index"],
+            "end_frame_index": window["end_frame_index"],
+            "severity": window["severity"],
+            "event_type": code,
+            "title": EVENT_TITLES.get(code, code.replace("_", " ").title()),
+            "confidence": 0.85 if code.startswith("driver_") or code == "phone_use" else 0.75,
+        })
+
+    for frame in frame_analyses:
+        frame_index = int(frame["frame_index"])
+        codes = set(frame.get("event_codes", [])) - set(DMS_EVENT_CODES)
+        for code, window in tuple(active.items()):
+            if frame_index - window["end_frame_index"] > EVENT_MERGE_GAP_FRAMES:
+                close(code)
+        for code in codes:
+            window = active.get(code)
+            if window is None:
+                active[code] = {
+                    "start_frame_index": frame_index,
+                    "end_frame_index": frame_index,
+                    "severity": int(frame["severity"]),
+                }
+            else:
+                window["end_frame_index"] = frame_index
+                window["severity"] = max(window["severity"], int(frame["severity"]))
+    for code in tuple(active):
+        close(code)
+    return sorted(events, key=lambda event: (event["frame_index"], event["event_type"]))
+
+
+def _generate_dms_event_log(trip_id: str, frame_analyses: list[dict]) -> list[dict]:
+    """Emit stable DMS states and coalesce repeated states within five seconds."""
+    runs: list[dict] = []
+    active: dict | None = None
+
+    def close_run() -> None:
+        nonlocal active
+        if active is None:
+            return
+        if active["end_frame_index"] - active["frame_index"] + 1 >= DMS_EVENT_MIN_FRAMES:
+            runs.append(active)
+        active = None
+
+    for frame in frame_analyses:
+        frame_index = int(frame["frame_index"])
+        codes = set(frame.get("event_codes", []))
+        code = next((candidate for candidate in DMS_EVENT_CODES if candidate in codes), None)
+
+        if active is None:
+            if code is not None:
+                active = {
+                    "event_type": code,
+                    "frame_index": frame_index,
+                    "end_frame_index": frame_index,
+                    "severity": int(frame["severity"]),
+                }
+            continue
+
+        if code == active["event_type"]:
+            active["end_frame_index"] = frame_index
+            active["severity"] = max(active["severity"], int(frame["severity"]))
+            continue
+
+        close_run()
+        if code is not None:
+            active = {
+                "event_type": code,
+                "frame_index": frame_index,
+                "end_frame_index": frame_index,
+                "severity": int(frame["severity"]),
+            }
+
+    close_run()
+
+    events: list[dict] = []
+    latest_by_code: dict[str, dict] = {}
+    for run in runs:
+        code = run["event_type"]
+        previous = latest_by_code.get(code)
+        if previous and run["frame_index"] - previous["end_frame_index"] <= DMS_REPEAT_SUPPRESSION_FRAMES:
+            previous["end_frame_index"] = run["end_frame_index"]
+            previous["severity"] = max(previous["severity"], run["severity"])
+            continue
+        event = {
+            "event_id": f"{trip_id}.{code}.{run['frame_index']}",
+            "trip_id": trip_id,
+            "frame_index": run["frame_index"],
+            "end_frame_index": run["end_frame_index"],
+            "severity": run["severity"],
+            "event_type": code,
+            "title": EVENT_TITLES[code],
+            "confidence": 0.85,
+        }
+        events.append(event)
+        latest_by_code[code] = event
+    return sorted(events, key=lambda event: (event["frame_index"], event["event_type"]))
 
 
 def load_trip_data(trip_data_path: Path) -> dict | None:
@@ -336,7 +467,11 @@ def generate_for_trip(trip_dir: Path, output_dir: Path, label_dir_name: str) -> 
         depth = load_depth_for_frame(trip_dir, frame_idx)
         road = generate_road_frame(frame_idx, kitti_objects, speed_kmh, depth=depth)
         dms = generate_dms_frame(frame_idx, trajectory_dms if trajectory_dms else None, frame_idx)
-        fusion = generate_fusion_frame(frame_idx, road, dms, {"speed_kmh": speed_kmh})
+        fusion = generate_fusion_frame(frame_idx, road, dms, {
+            "speed_kmh": speed_kmh,
+            "longitudinal_accel_mps2": ego.get("longitudinal_accel"),
+            "lateral_accel_mps2": ego.get("lateral_accel"),
+        })
 
         (trip_output / "road" / f"{frame_idx:06d}.json").write_text(
             json.dumps(road, indent=2), encoding="utf-8"
@@ -350,12 +485,25 @@ def generate_for_trip(trip_dir: Path, output_dir: Path, label_dir_name: str) -> 
         frame_analyses.append(fusion)
 
     summary = generate_trip_summary(trip_id, frame_analyses)
+    events = generate_event_log(trip_id, frame_analyses)
     (trip_output / "fusion" / "summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )
+    (trip_output / "fusion" / "events.json").write_text(
+        json.dumps(events, indent=2), encoding="utf-8"
+    )
 
-    print(f"  Generated {len(frame_analyses)} frame analyses + summary (safety={summary['safetyScore']})")
+    print(f"  Generated {len(frame_analyses)} frame analyses, {len(events)} event windows + summary (risk={summary['riskScore']})")
     return {"trip_id": trip_id, "frames": len(frame_analyses), "summary": summary}
+
+
+def discover_trip_dirs(dataset_root: Path) -> list[Path]:
+    """Return every available trip; partial-trip artifact generation is unsafe."""
+    return sorted(
+        trip_dir
+        for trip_dir in dataset_root.iterdir()
+        if trip_dir.is_dir() and trip_dir.name.startswith("T")
+    )
 
 
 def main() -> None:
@@ -363,20 +511,13 @@ def main() -> None:
     parser.add_argument("--dataset-root", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--label-dir-name", default="label2_yolo_v3")
-    parser.add_argument("--trip", action="append", help="Trip ID; repeat as needed.")
     args = parser.parse_args()
 
     if not args.dataset_root.is_dir():
         print(f"Dataset root not found: {args.dataset_root}", file=sys.stderr)
         sys.exit(1)
 
-    requested = {trip.casefold() for trip in args.trip or []}
-    trip_dirs = sorted(
-        d
-        for d in args.dataset_root.iterdir()
-        if d.is_dir() and d.name.startswith("T")
-        and (not requested or d.name.casefold() in requested)
-    )
+    trip_dirs = discover_trip_dirs(args.dataset_root)
     if not trip_dirs:
         print("No trip directories found", file=sys.stderr)
         sys.exit(1)

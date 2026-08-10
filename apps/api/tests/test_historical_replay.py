@@ -27,6 +27,25 @@ def test_filesystem_store_overlays_phone_predictions(tmp_path) -> None:
     assert result["frames"][0]["driver"]["phone_use"] is True
 
 
+def test_filesystem_store_prefers_enriched_artifact_document(tmp_path) -> None:
+    dataset = tmp_path / "data"
+    artifacts = tmp_path / "artifacts"
+    source_trip = dataset / "T01d"
+    artifact_trip = artifacts / "T01d"
+    source_trip.mkdir(parents=True)
+    artifact_trip.mkdir(parents=True)
+    (source_trip / "T01d.json.gz").write_bytes(
+        gzip.compress(json.dumps({"frames": [{"driver": {"state": "unknown"}}]}).encode())
+    )
+    (artifact_trip / "T01d.json.gz").write_bytes(
+        gzip.compress(json.dumps({"frames": [{"driver": {"state": "drowsy"}}]}).encode())
+    )
+
+    result = asyncio.run(FilesystemTripMediaStore(dataset, artifact_root=artifacts).read_trip_document("T01d"))
+
+    assert result["frames"][0]["driver"]["state"] == "drowsy"
+
+
 def test_filesystem_store_discovers_organizer_road_and_driver_frames(tmp_path) -> None:
     road = tmp_path / "T01-Sample" / "kitti" / "image_2"
     driver = tmp_path / "T01-Sample" / "driver"

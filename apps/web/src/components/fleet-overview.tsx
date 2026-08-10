@@ -12,14 +12,15 @@ const statusCopy = {
 
 export function FleetOverview({ trips }: { trips: FleetTrip[] }) {
   const ranked = [...trips].sort(
-    (left, right) => right.severity - left.severity || left.score - right.score,
+    (left, right) => (right.severity ?? 0) - (left.severity ?? 0)
+      || (left.score ?? Number.POSITIVE_INFINITY) - (right.score ?? Number.POSITIVE_INFINITY),
   );
 
   return (
     <section className="fleet-grid" aria-label="Fleet risk ranking">
       {ranked.map((trip, index) => (
         <Link
-          className={`trip-card severity-${trip.severity}`}
+          className={`trip-card severity-${trip.severity ?? "unscored"}`}
           data-testid="trip-card"
           href={`/trips/${encodeURIComponent(trip.tripId)}`}
           key={trip.tripId}
@@ -31,8 +32,8 @@ export function FleetOverview({ trips }: { trips: FleetTrip[] }) {
                 <span className="eyebrow">{trip.vehicleId}</span>
                 <h2>{trip.tripId}</h2>
               </div>
-              <div className="score-dial" aria-label={`Safety score ${trip.score}`}>
-                {trip.score}
+              <div className="score-dial" aria-label={trip.score === null ? "Safety score pending validation" : `Safety score ${trip.score}`}>
+                {trip.score ?? "--"}
               </div>
             </div>
             <p className="alert-copy">{trip.latestAlert}</p>

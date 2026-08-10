@@ -26,11 +26,6 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dataset", choices=DATASET_ROOTS, default="redacted")
     parser.add_argument("--dataset-root", type=Path)
-    parser.add_argument("--trip", action="append", help="Trip ID; repeat as needed.")
-    parser.add_argument("--start", type=int, default=0)
-    parser.add_argument("--end", type=int)
-    parser.add_argument("--stride", type=int, default=1)
-    parser.add_argument("--max-frames", type=int)
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL_PATH)
     parser.add_argument("--device", default="cuda:0", help="CUDA device or cpu")
     parser.add_argument("--conf", type=float, default=0.25)
@@ -40,20 +35,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def selected_images(image_dir: Path, args: argparse.Namespace) -> list[Path]:
-    images = [
+def selected_images(image_dir: Path) -> list[Path]:
+    return [
         path
         for path in sorted(image_dir.iterdir())
         if path.suffix.lower() in {".jpg", ".jpeg", ".png"} and path.stem.isdigit()
     ]
-    selected = [
-        path
-        for path in images
-        if int(path.stem) >= args.start
-        and (args.end is None or int(path.stem) <= args.end)
-        and (int(path.stem) - args.start) % max(1, args.stride) == 0
-    ]
-    return selected[: args.max_frames] if args.max_frames is not None else selected
 
 
 def kitti_line(label: str, bbox: tuple[float, float, float, float], confidence: float) -> str:
@@ -86,19 +73,14 @@ def main() -> None:
         raise SystemExit(f"YOLO model not found: {args.model}")
 
     dataset = DatasetPaths(dataset_root)
-    requested = {trip.casefold() for trip in args.trip or []}
-    trips = [
-        trip
-        for trip in discover_trips(dataset)
-        if not requested or trip.trip_id.casefold() in requested
-    ]
+    trips = list(discover_trips(dataset))
     if not trips:
         raise SystemExit("No matching trips selected.")
 
     detector = YoloDetector(args.model, args.device, args.conf, args.iou)
     for discovered in trips:
         trip = resolve_trip(dataset, discovered.trip_id)
-        images = selected_images(trip.image_2_dir, args)
+        images = selected_images(trip.image_2_dir)
         written = 0
         skipped = 0
         print(f"{trip.trip_id}: exporting {len(images)} frame(s) to {args.label_dir_name}")

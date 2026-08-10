@@ -49,4 +49,21 @@ describe("road-left frame map", () => {
       sources: [{ src: "/api/trips/T01-Sample/road-video/content", type: "video/mp4" }],
     });
   });
+
+  it("does not silently replace later evidence with the last packaged video frame", () => {
+    const view = render(createElement(RoadLeftVideo, {
+      descriptor: {
+        tripId: "T01-Sample",
+        assetUrl: "/api/trips/T01-Sample/road-video/content",
+        fps: 20,
+        durationS: 30,
+        frameMap,
+      },
+      selectedFrameIndex: 20,
+      onFrameIndexChange: () => undefined,
+    }));
+
+    expect(view.getByText("Road video unavailable at frame 20")).toBeVisible();
+    expect(view.getByText(/Packaged road video covers frames 0–15/i)).toBeVisible();
+  });
 });

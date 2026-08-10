@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import gzip
 import json
-import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -60,26 +59,7 @@ def compute_trip_aggregate(frames: list[dict], trajectory_points: list[dict]) ->
     max_risk = round(max(risk_scores), 1) if risk_scores else 0.0
     avg_risk = round(sum(risk_scores) / len(risk_scores), 1) if risk_scores else 0.0
 
-    alertness = 0.5
-    penalty = (
-        min(35, near_miss * 3)
-        + min(15, harsh_brake)
-        + min(10, harsh_corner * 2)
-        + min(15, round(max(0.0, speeding_pct) * 0.2))
-        + round((1 - alertness) * 20)
-    )
-    safe_score = max(0, 100 - penalty)
-
-    risk_class = "low"
-    if max_risk >= 80:
-        risk_class = "critical"
-    elif max_risk >= 60:
-        risk_class = "high"
-    elif max_risk >= 30:
-        risk_class = "medium"
-
     return {
-        "safe_driving_score": safe_score,
         "harsh_brake_count": harsh_brake,
         "harsh_accel_count": harsh_accel,
         "harsh_corner_count": harsh_corner,
@@ -89,7 +69,6 @@ def compute_trip_aggregate(frames: list[dict], trajectory_points: list[dict]) ->
         "avg_headway_sec": 1.5,
         "max_risk_score": max_risk,
         "avg_risk_score": avg_risk,
-        "risk_classification": risk_class,
     }
 
 
@@ -140,13 +119,13 @@ def main() -> None:
         trip_dir = HACKATHON_ROOT / trip_id
         json_path = trip_dir / f"{trip_id}.json.gz"
         if not json_path.is_file():
-            print(f"  SKIP: no JSON.gz found")
+            print("  SKIP: no JSON.gz found")
             continue
 
         # Load existing trip_data.json for trajectory with DMS states
         trip_data_path = ARTIFACTS_TRIPS / trip_id / "trip_data.json"
         if not trip_data_path.is_file():
-            print(f"  SKIP: no trip_data.json found")
+            print("  SKIP: no trip_data.json found")
             continue
 
         trip_data = json.loads(trip_data_path.read_text(encoding="utf-8"))
@@ -158,6 +137,13 @@ def main() -> None:
 
         trip_aggregate = compute_trip_aggregate(frames, trajectory)
         driver_summary = compute_driver_summary(trajectory)
+        for raw_frame, point in zip(frames, trajectory):
+            if not isinstance(raw_frame, dict):
+                continue
+            driver = raw_frame.get("driver")
+            driver_data = dict(driver) if isinstance(driver, dict) else {}
+            driver_data["state"] = point.get("driver_state", "unknown")
+            raw_frame["driver"] = driver_data
 
         data["trip_aggregate"] = trip_aggregate
         data["driver_summary"] = driver_summary
@@ -174,15 +160,12 @@ def main() -> None:
             else "unknown"
         )
 
-        # Update trip_data.json with computed aggregates
-        trip_data["safety_score"] = trip_aggregate["safe_driving_score"]
-        trip_data["severity"] = _severity(trip_aggregate["safe_driving_score"], trip_aggregate["max_risk_score"])
-        trip_data["latest_alert"] = _latest_alert(trip_aggregate)
+        # Keep dashboard metadata limited to source-backed trip evidence.
         trip_data["driver_state"] = dominant_state
         trip_data_path.write_text(json.dumps(trip_data, indent=2, ensure_ascii=False), encoding="utf-8")
 
         all_trips.append(trip_data)
-        print(f"  Score: {trip_data['safety_score']}, Severity: {trip_data['severity']}, Driver: {dominant_state}, Alert: {trip_data['latest_alert']}")
+        print(f"  Driver: {dominant_state}; aggregate evidence enriched")
 
     fleet_summary = {
         "trips": all_trips,
@@ -193,31 +176,6 @@ def main() -> None:
         json.dumps(fleet_summary, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     print(f"\nDone. {len(all_trips)} trips enriched -> {OUTPUT_ROOT}")
-
-
-def _severity(score: int, max_risk: float) -> int:
-    if max_risk >= 80 or score <= 45:
-        return 5
-    if max_risk >= 60 or score <= 60:
-        return 4
-    if max_risk >= 30 or score <= 75:
-        return 3
-    if score <= 90:
-        return 2
-    return 1
-
-
-def _latest_alert(agg: dict) -> str:
-    if agg.get("near_miss_count"):
-        return f"{agg['near_miss_count']} near-miss event(s)"
-    if agg.get("harsh_brake_count"):
-        return f"{agg['harsh_brake_count']} harsh-brake event(s)"
-    if agg.get("harsh_corner_count"):
-        return f"{agg['harsh_corner_count']} fast-corner event(s)"
-    if agg.get("speeding_pct_time", 0) > 0:
-        return "Speeding time detected"
-    return "No aggregate risk event"
-
 
 if __name__ == "__main__":
     main()

@@ -42,4 +42,10 @@ describe("FleetOverview", () => {
 
     expect(screen.getByText("Model degraded")).toBeVisible();
   });
+
+  it("marks an unvalidated score as pending instead of assigning a fallback", () => {
+    render(<FleetOverview trips={[{ ...safeTrip, score: null, severity: null }]} />);
+
+    expect(screen.getByLabelText("Safety score pending validation")).toHaveTextContent("--");
+  });
 });

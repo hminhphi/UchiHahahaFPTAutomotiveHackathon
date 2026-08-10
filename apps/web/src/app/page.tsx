@@ -5,8 +5,9 @@ export const dynamic = "force-dynamic";
 
 export default async function FleetPage() {
   const trips = await getFleetTrips();
-  const critical = trips.filter((trip) => trip.severity >= 4).length;
-  const average = Math.round(trips.reduce((total, trip) => total + trip.score, 0) / trips.length);
+  const critical = trips.filter((trip) => (trip.severity ?? 0) >= 4).length;
+  const scores = trips.flatMap((trip) => trip.score === null ? [] : [trip.score]);
+  const average = scores.length ? Math.round(scores.reduce((total, score) => total + score, 0) / scores.length) : null;
 
   return (
     <main>
@@ -29,8 +30,8 @@ export default async function FleetPage() {
             <strong>{critical.toString().padStart(2, "0")}</strong>
           </article>
           <article>
-            <span>Fleet score</span>
-            <strong>{average}</strong>
+            <span>Validated scores</span>
+            <strong>{average ?? "--"}</strong>
           </article>
         </div>
       </section>
@@ -39,7 +40,7 @@ export default async function FleetPage() {
           <span className="eyebrow">Priority queue</span>
           <h2>Trips requiring attention</h2>
         </div>
-        <p>Sorted by severity, then safety score. Select a trip to inspect evidence.</p>
+        <p>Scores remain unranked until fleet validation is complete. Select a trip to inspect evidence.</p>
       </section>
       <FleetOverview trips={trips} />
     </main>

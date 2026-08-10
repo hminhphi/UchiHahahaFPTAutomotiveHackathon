@@ -1,6 +1,6 @@
 # FleetIQ Web
 
-Next.js App Router operations console for fleet ranking, trip drill-down,
+Next.js App Router operations console for fleet evidence review, trip drill-down,
 synchronized camera replay, risk evidence, and coaching reports.
 
 The browser talks only to FastAPI HTTP/WSS:

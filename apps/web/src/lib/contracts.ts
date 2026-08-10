@@ -5,8 +5,8 @@ export interface FleetTrip {
   tripId: string;
   driverName: string;
   vehicleId: string;
-  score: number;
-  severity: 1 | 2 | 3 | 4 | 5;
+  score: number | null;
+  severity: 1 | 2 | 3 | 4 | 5 | null;
   latestAlert: string;
   speedMps: number;
   ttcS: number | null;

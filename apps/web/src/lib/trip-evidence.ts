@@ -37,24 +37,22 @@ export function buildTripScoreSignals(summary: FusionTripSummary | TripTrajector
     {
       label: "Collision margin",
       value: roundScore(scores?.road),
-      note: "FleetIQ roadface-worker / stereo TTC",
+      note: "Rule signal from retained ego-corridor objects and GT depth ROI; not a validated score",
     },
     {
       label: "Driver attention",
       value: roundScore(scores?.dms),
-      note: scores?.dms == null
-        ? "DMS unavailable until a verified checkpoint is supplied"
-        : "FleetIQ dms-worker / verified sequence checkpoint",
+      note: "MediaPipe face geometry and pseudo-label rules; not an evaluated checkpoint score",
     },
     {
       label: "Vehicle handling",
       value: roundScore(scores?.telemetry),
-      note: "FleetIQ fusion of speed and longitudinal/lateral acceleration",
+      note: "Rule signal from organizer speed and acceleration telemetry; not a validated score",
     },
     {
       label: "Lane discipline",
       value: roundScore(scores?.lane),
-      note: "FleetIQ lane association and offset",
+      note: "Unavailable: current fixed image corridor is object filtering, not lane-discipline scoring",
     },
   ];
 }

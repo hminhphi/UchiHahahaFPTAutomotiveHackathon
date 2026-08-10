@@ -28,6 +28,8 @@ describe("trip operations event ownership", () => {
     );
 
     expect(screen.getAllByText("Short TTC detected")).toHaveLength(1);
+    expect(screen.getByText("Rule-based score")).toBeInTheDocument();
+    expect(screen.getByText("Score breakdown")).toBeInTheDocument();
     expect(screen.getByLabelText("Frame-linked review")).toBeInTheDocument();
     expect(screen.queryByLabelText("Road-left event track")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Risk event: Short TTC detected at frame 8")).toBeInTheDocument();

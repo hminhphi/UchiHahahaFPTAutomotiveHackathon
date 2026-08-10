@@ -33,6 +33,7 @@ node_modules/
 .opencode/
 .codex/
 .superpowers/
+.worktrees/
 opencode.json
 *.swp
 *.swo
@@ -52,6 +53,8 @@ wandb/
 mlruns/
 outputs/
 predictions/
+submission/UchiHahaha_FleetIQ_Guardian_Round2_Final/
+submission/*_READY_FOR_UPLOAD.zip.sha256
 checkpoints/
 
 # Model weights and numerical caches
@@ -86,6 +89,8 @@ extracted_figures/
 extracted_text/
 *.pptx.rendered/
 *.pdf.rendered/
+docs/proposal/rendered/
+docs/proposal/*_reviewed*.pdf
 
 # Downloaded tooling and organizer reference material
 *.jar
@@ -93,6 +98,6 @@ Template for Teams - Hackathon 2026.pptx
 Automotive Hackathon Webinar 25.06 (1).pdf
 
 # Release packages
-release/
-release-lite/
+/release/
+/release-lite/
 *.zip

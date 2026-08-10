@@ -114,7 +114,8 @@ services:
       FLEETIQ_DATABASE_URL: postgresql://${POSTGRES_USER:-fleetiq}:${POSTGRES_PASSWORD:-fleetiq-local-only}@postgres:5432/${POSTGRES_DB:-fleetiq}
       FLEETIQ_REPLAY_ENABLED: "true"
       FLEETIQ_REPLAY_FPS: ${FLEETIQ_REPLAY_FPS:-10}
-      FLEETIQ_MEDIA_BACKEND: s3
+      FLEETIQ_MEDIA_BACKEND: filesystem
+      FLEETIQ_DATASET_ROOT: /data/Hackathon_Dataset_Redacted/Hackathon_Dataset_Redacted
       FLEETIQ_OBJECT_STORAGE_ENDPOINT: http://minio:9000
       FLEETIQ_OBJECT_STORAGE_BUCKET: ${FLEETIQ_OBJECT_STORAGE_BUCKET:-fleetiq-demo}
       FLEETIQ_OBJECT_STORAGE_ACCESS_KEY: ${FLEETIQ_OBJECT_STORAGE_ACCESS_KEY:-fleetiq-local}

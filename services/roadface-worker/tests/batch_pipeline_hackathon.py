@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from fleetiq_data import DatasetPaths, load_trip_document, resolve_trip
+from fleetiq_data import DatasetPaths
 from fleetiq_roadface.pipeline import PipelineOptions, RoadfacePipeline
 from fleetiq_roadface.yolo_detector import YoloDetector
 

@@ -6,8 +6,8 @@ This runbook lets an Automotive Hackathon reviewer reproduce the final FleetIQ G
 
 ## Inputs
 
-1. Source at Git tag `v1.0.0`.
-2. `FleetIQGuardian-v1.0.0-runtime.zip`, produced by `create_release_package.ps1`.
+1. Source at Git tag `v1.1.0`.
+2. `FleetIQGuardian-v1.1.0-runtime.zip`, produced by `tools/release/create_release_package.ps1`.
 3. Approved organizer data placed at `data/Practice_Dataset/Practice_Dataset/` and `data/Hackathon_Dataset_Redacted/Hackathon_Dataset_Redacted/`.
 4. Docker Desktop, Python 3.12 with uv, Node.js 22, and pnpm 11.
 
@@ -38,7 +38,7 @@ Copy-Item .env.example .env
 docker compose --profile full up --build
 ```
 
-Open `http://localhost:3000`, then inspect T01d. The expected reviewer path is fleet ranking -> T01d -> score and event cards -> road replay -> frame-linked evidence.
+Open `http://localhost:3000`, then inspect T01d. The expected reviewer path is fleet overview -> T01d -> rule score and event cards -> road replay -> frame-linked evidence.
 
 ## Verify Submission Outputs
 
@@ -52,13 +52,13 @@ The evaluator command is for the full-GT Practice trip only. Do not infer redact
 ## Build A Private Handoff Package
 
 ```powershell
-./create_release_package.ps1
+./tools/release/create_release_package.ps1 -Version v1.1.0 -PrivateReviewerHandoff
 ```
 
 The default package excludes data. For an organizer-approved private transfer that needs to run without a separate data download:
 
 ```powershell
-./create_release_package.ps1 -IncludeDataset
+./tools/release/create_release_package.ps1 -Version v1.1.0 -PrivateReviewerHandoff -IncludeDataset
 ```
 
 Do not attach an `-IncludeDataset` archive to a public release without organizer permission.
@@ -66,5 +66,5 @@ Do not attach an `-IncludeDataset` archive to a public release without organizer
 The optional YOLOP mask set is large and not required by the primary replay flow. Add it only when a reviewer needs every segmentation overlay:
 
 ```powershell
-./create_release_package.ps1 -IncludeYolopMasks
+./tools/release/create_release_package.ps1 -Version v1.1.0 -PrivateReviewerHandoff -IncludeYolopMasks
 ```

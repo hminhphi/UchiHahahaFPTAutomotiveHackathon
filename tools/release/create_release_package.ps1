@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "v1.0.0",
+    [string]$Version = "v1.1.0",
+    [switch]$PrivateReviewerHandoff,
     [switch]$IncludeDataset,
     [switch]$IncludeYolopMasks,
     [switch]$Overwrite
@@ -8,10 +9,25 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$releaseRoot = Join-Path $PSScriptRoot "release"
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$releaseRoot = Join-Path $repoRoot "release"
 $releaseName = "FleetIQGuardian-$Version"
 $stage = Join-Path $releaseRoot $releaseName
 $archive = Join-Path $releaseRoot "$releaseName-runtime.zip"
+
+if (-not $PrivateReviewerHandoff) {
+    throw "Pass -PrivateReviewerHandoff to acknowledge that this package contains non-public runtime evidence."
+}
+
+$worktreeStatus = ((& git -C $repoRoot status --porcelain) -join "`n").Trim()
+if ($worktreeStatus) {
+    throw "Release worktree is not clean. Commit or remove every tracked and untracked change before packaging."
+}
+$headCommit = (& git -C $repoRoot rev-parse HEAD).Trim()
+$tagCommit = (& git -C $repoRoot rev-parse "$Version^{commit}" 2>$null).Trim()
+if (-not $tagCommit -or $headCommit -ne $tagCommit) {
+    throw "Tag $Version must resolve to the current committed HEAD before packaging."
+}
 
 if ((Test-Path -LiteralPath $stage) -or (Test-Path -LiteralPath $archive)) {
     if (-not $Overwrite) {
@@ -27,7 +43,7 @@ New-Item -ItemType Directory -Path (Join-Path $stage "runtime") -Force | Out-Nul
 function Copy-RequiredPath {
     param([string]$RelativePath)
 
-    $source = Join-Path $PSScriptRoot $RelativePath
+    $source = Join-Path $repoRoot $RelativePath
     if (-not (Test-Path -LiteralPath $source)) {
         throw "Required release input is missing: $RelativePath"
     }
@@ -48,7 +64,7 @@ function Copy-RequiredPath {
 function Copy-OptionalPath {
     param([string]$RelativePath)
 
-    $source = Join-Path $PSScriptRoot $RelativePath
+    $source = Join-Path $repoRoot $RelativePath
     if (-not (Test-Path -LiteralPath $source)) {
         Write-Warning "Optional release input is missing: $RelativePath"
         return
@@ -69,21 +85,33 @@ function Copy-OptionalPath {
 
 # Source is embedded so reviewers can reproduce this exact package offline.
 $sourceArchive = Join-Path $stage "source\$releaseName-source.zip"
-& git -C $PSScriptRoot archive --format=zip --prefix="$releaseName/" HEAD --output=$sourceArchive
+& git -C $repoRoot archive --format=zip --prefix="$releaseName/" $Version --output=$sourceArchive
 if ($LASTEXITCODE -ne 0) {
-    throw "git archive failed. Build the package from a committed release candidate."
+    throw "git archive failed for tag $Version."
+}
+
+Push-Location $repoRoot
+try {
+    & uv run python tools/dataset/validate_submission.py --predictions-dir predictions/UchiHahaha
+    if ($LASTEXITCODE -ne 0) {
+        throw "Organizer-format prediction validation failed."
+    }
+}
+finally {
+    Pop-Location
 }
 
 # Runtime evidence is deliberately separated from source because organizer data
 # and trained/generated artifacts are local-only in the Git repository.
 @(
     "artifacts/models/dms/best_sequence_model.pt",
+    "artifacts/models/dms/face_landmarker.task",
     "artifacts/training/roadface/train_runs/yolo26n_detached_v3/weights/best.pt",
     "artifacts/trips",
     "artifacts/evaluation",
     "artifacts/renders/roadface",
     "predictions/UchiHahaha",
-    "submission/UchiHahaha_FleetIQ_Guardian_R2",
+    "submission/UchiHahaha_FleetIQ_Guardian_Round2_Final",
     "docs/submission"
 ) | ForEach-Object { Copy-RequiredPath $_ }
 
@@ -103,7 +131,7 @@ if ($IncludeDataset) {
 $readme = @"
 # FleetIQ Guardian $Version Runtime Package
 
-This package is an offline handoff for Automotive Hackathon reviewers. It contains a Git source archive plus the local runtime evidence required by the current final dashboard build.
+This package is a private, organizer-approved handoff for Automotive Hackathon reviewers. It contains a tagged Git source archive plus the local runtime evidence required by the current final dashboard build.
 
 ## Run
 
@@ -114,32 +142,19 @@ This package is an offline handoff for Automotive Hackathon reviewers. It contai
 
 ## Integrity
 
-Verify the key model and submission hashes in `MANIFEST.sha256` before review. The source release intentionally excludes organizer data and generated artifacts; this runtime package supplies them without committing them to Git.
+Verify every packaged file against `MANIFEST.sha256` before review. The source release intentionally excludes organizer data and generated artifacts; this runtime package supplies them without committing them to Git.
 "@
 Set-Content -LiteralPath (Join-Path $stage "README.md") -Value $readme -Encoding utf8NoBOM
 
-$keyFiles = @(
-    "source\$releaseName-source.zip",
-    "runtime\artifacts\models\dms\best_sequence_model.pt",
-    "runtime\artifacts\training\roadface\train_runs\yolo26n_detached_v3\weights\best.pt"
-) + (Get-ChildItem -LiteralPath (Join-Path $stage "runtime\predictions\UchiHahaha") -File | ForEach-Object {
-    $_.FullName.Substring($stage.Length + 1)
-})
-$directorySummaries = @(
-    "runtime\artifacts\trips",
-    "runtime\artifacts\evaluation",
-    "runtime\submission"
-) | ForEach-Object {
-    $directory = Join-Path $stage $_
-    $files = Get-ChildItem -LiteralPath $directory -Recurse -File
-    $bytes = ($files | Measure-Object -Property Length -Sum).Sum
-    "$($_.Replace('\', '/'))  files=$($files.Count)  bytes=$bytes"
-}
-$manifest = @("# SHA-256 hashes for source, selected models, and submission CSVs") + ($keyFiles | ForEach-Object {
-        $path = Join-Path $stage $_
-        $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
-        "$hash  $($_.Replace('\', '/'))"
-    }) + @("", "# Directory summaries") + $directorySummaries
+$manifest = @(
+    "# FleetIQ Guardian $Version private runtime handoff",
+    "# Source tag commit: $headCommit",
+    "# SHA-256 hashes for every packaged file"
+) + (Get-ChildItem -LiteralPath $stage -Recurse -File | ForEach-Object {
+        $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        $relativePath = $_.FullName.Substring($stage.Length + 1).Replace('\', '/')
+        "$hash  $relativePath"
+    })
 Set-Content -LiteralPath (Join-Path $stage "MANIFEST.sha256") -Value $manifest -Encoding ascii
 
 Push-Location $releaseRoot
@@ -153,5 +168,7 @@ finally {
     Pop-Location
 }
 $sizeMiB = [math]::Round(((Get-Item -LiteralPath $archive).Length / 1MB), 1)
+$archiveHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+Set-Content -LiteralPath "$archive.sha256" -Value "$archiveHash  $([IO.Path]::GetFileName($archive))" -Encoding ascii
 Write-Host "Created $archive ($sizeMiB MiB)" -ForegroundColor Green
-Write-Host "Use -IncludeDataset only for an approved private organizer handoff." -ForegroundColor Yellow
+Write-Host "Private package only. Use -IncludeDataset only for an approved organizer handoff." -ForegroundColor Yellow

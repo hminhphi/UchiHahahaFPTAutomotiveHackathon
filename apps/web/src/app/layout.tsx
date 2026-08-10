@@ -22,19 +22,17 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
               <span><strong>FleetIQ</strong><small>Guardian</small></span>
             </NavLink>
             <nav aria-label="Primary navigation">
-              <NavLink href="/">Overview</NavLink>
-              <NavLink href="/trips/T01d">Trip review</NavLink>
-              <NavLink href="/drivers">Drivers</NavLink>
-              <NavLink href="/vehicles">Vehicles</NavLink>
-              <NavLink href="/risk-insights">Risk insights</NavLink>
-              <NavLink href="/reports">Reports</NavLink>
+              <NavLink href="/" icon="overview">Overview</NavLink>
+              <NavLink href="/trips/T01d" icon="trip">Trip review</NavLink>
+              <NavLink href="/drivers" icon="drivers">Drivers</NavLink>
+              <NavLink href="/vehicles" icon="vehicles">Vehicles</NavLink>
+              <NavLink href="/risk-insights" icon="insights">Risk insights</NavLink>
+              <NavLink href="/reports" icon="reports">Reports</NavLink>
             </nav>
-            <div className="nav-footer"><span className="status-dot" /> Demo control plane</div>
           </aside>
           <div className="app-content">
             <header className="site-header">
-              <div><span className="header-kicker">Fleet safety operations</span><strong>Historical trip intelligence</strong></div>
-              <div className="system-status"><span className="status-dot" /> Systems ready</div>
+              <strong>Fleet safety operations</strong>
             </header>
             {children}
           </div>

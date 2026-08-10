@@ -1,14 +1,11 @@
 import type { RoadFrameAnalysis } from "@/lib/operations";
 
-export function RoadAnalysisOverlay({ tripId, frameIndex, analysis }: { tripId: string; frameIndex: number | null; analysis: RoadFrameAnalysis | null }) {
+export function RoadAnalysisOverlay({ frameIndex, analysis }: { frameIndex: number | null; analysis: RoadFrameAnalysis | null }) {
   if (frameIndex === null) return null;
   return (
     <div className="analysis-overlay" aria-label="FleetIQ road perception overlay">
-      {/* Generated mask is an exact frame artifact and must not be optimized. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="lane-mask-overlay" src={`/api/trips/${encodeURIComponent(tripId)}/analysis/road-mask/${frameIndex}`} alt="" />
       <svg viewBox="0 0 640 360" preserveAspectRatio="none" role="img">
-        {analysis?.detections.map((detection) => {
+        {analysis?.detections.filter((detection) => detection.lane_relation === "in_lane").map((detection) => {
           const box = detection.bounding_box;
           const label = formatDetection(detection);
           return (

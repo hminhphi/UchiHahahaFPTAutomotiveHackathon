@@ -1,0 +1,64 @@
+@startuml
+!theme plain
+title FleetIQ Guardian - Luật Event, Risk Score và Coaching
+
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #19226D
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #19226D
+  FontColor #000000
+}
+
+start
+:Đọc object bbox từ label2_yolo_v3;
+if (Rộng > 30 px\nvà cao > 30 px?) then (có)
+  if (>= 50% bbox\nthuộc ego lane?) then (có)
+    :Depth ROI -> khoảng cách và TTC;
+  else (không)
+    :Bỏ object ngoài lane; #FFF7EE
+    stop
+  endif
+else (không)
+  :Bỏ object quá nhỏ; #FFF7EE
+  stop
+endif
+
+:TTC rule;
+if (TTC < 1,5 s?) then (có)
+  :short_ttc, penalty 35;
+elseif (TTC < 2,5 s?) then (có)
+  :high_ttc_risk, penalty 26;
+elseif (TTC < 4 s?) then (có)
+  :moderate_ttc_risk, penalty 15;
+endif
+:DMS rule;
+if (drowsy?) then (có)
+  :driver_drowsiness, penalty 25;
+elseif (distracted or phone?) then (có)
+  :driver_distraction / phone_use, penalty 15;
+endif
+:Telemetry rule;
+if (speed > 60 km/h?) then (có)
+  :speeding, penalty 5-15;
+endif
+if (|a_doc| >= 4 or |a_ngang| >= 3?) then (có)
+  :harsh acceleration, penalty 10 mỗi loại;
+endif
+
+if (collision và attention cùng có?) then (có)
+  :compound_risk;\nseverity +1, tối đa 5; #F37021
+endif
+:frame risk = tổng penalty, giới hạn 0..100; #034EA2
+:trip risk = trung bình frame risk;\nsafety score = 100 - trip risk;
+:Map event -> coaching label;
+if (severity >= 4?) then (có)
+  :Visual coaching 10-15 giây;
+else (không)
+  :Post-trip coaching 300 giây;
+endif
+stop
+@enduml

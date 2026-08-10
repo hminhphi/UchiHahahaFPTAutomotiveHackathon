@@ -197,9 +197,36 @@ async def get_fusion_summary(request: Request, trip_id: str) -> JSONResponse:
         raise HTTPException(status_code=500, detail="Failed to read fusion summary") from exc
 
     return JSONResponse(
-        content=content,
+        content={
+            "trip_id": content.get("tripId", trip_id),
+            "producer": content.get("producer", "fusion-worker"),
+            "risk_score": content.get("riskScore"),
+            "safety_score": content.get("safetyScore"),
+            "component_safety_scores": content.get("componentSafetyScores", {}),
+            "event_counts": content.get("eventCounts", {}),
+            "rule_version": content.get("ruleVersion"),
+        },
         headers={"Cache-Control": "private, max-age=60"},
     )
+
+
+@router.get("/{trip_id}/events")
+async def get_trip_events(trip_id: str) -> JSONResponse:
+    """Serve consolidated rule-based event windows for evidence navigation."""
+    if not _SAFE_IDENTIFIER.fullmatch(trip_id):
+        raise HTTPException(status_code=404, detail="Trip events unavailable")
+    events_path = Path(
+        __import__("os").environ.get("FLEETIQ_ARTIFACTS_ROOT", "artifacts/trips")
+    ) / trip_id / "analysis" / "fusion" / "events.json"
+    if not events_path.is_file():
+        return JSONResponse({"data": []}, headers={"Cache-Control": "private, max-age=60"})
+    try:
+        events = json.loads(events_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=500, detail="Failed to read trip events") from exc
+    if not isinstance(events, list):
+        raise HTTPException(status_code=500, detail="Trip events are invalid")
+    return JSONResponse({"data": events}, headers={"Cache-Control": "private, max-age=60"})
 
 
 @router.get("/{trip_id}/analysis/road/masks/{frame_index}", response_class=Response)

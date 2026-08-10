@@ -147,12 +147,6 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--team", required=True, help="Team name used in the output path.")
     parser.add_argument(
-        "--trip",
-        action="append",
-        required=True,
-        help="Scored trip id (e.g. T01d). Repeat for multiple trips.",
-    )
-    parser.add_argument(
         "--dataset-root",
         type=Path,
         default=Path("data/Hackathon_Dataset_Redacted/Hackathon_Dataset_Redacted"),
@@ -171,6 +165,14 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def discover_scored_trip_ids(dataset_root: Path) -> list[str]:
+    return sorted(
+        trip_dir.name
+        for trip_dir in dataset_root.iterdir()
+        if trip_dir.is_dir() and trip_dir.name.startswith("T") and trip_dir.name.endswith("d")
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     try:
@@ -178,7 +180,10 @@ def main(argv: list[str] | None = None) -> int:
     except ModuleNotFoundError:
         from export_submission_pipeline import export_trip
 
-    for trip_id in args.trip:
+    trip_ids = discover_scored_trip_ids(args.dataset_root)
+    if not trip_ids:
+        raise SystemExit("No scored trips found.")
+    for trip_id in trip_ids:
         output_path = args.output_root / args.team / f"{trip_id}.csv"
         export_trip(
             trip_id=trip_id,

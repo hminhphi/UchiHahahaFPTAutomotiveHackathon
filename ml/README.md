@@ -1,13 +1,19 @@
 # ML
 
-Purpose: Contains FleetIQ machine-learning training and evaluation projects.
+Offline training and evaluation code for FleetIQ Guardian. Deployable services
+consume generated artifacts; they must not import training modules.
 
-Owner: Data and Perception Engineering.
+| Area | Location | Final role |
+| --- | --- | --- |
+| Road-facing detector training | `training/roadface/` | Produces the custom YOLO label/model artifacts used by road evidence generation |
+| DMS feature and sequence training | `training/dms/` | Produces offline training/evaluation artifacts; the final dashboard runtime uses MediaPipe geometry rules |
+| SageMaker packaging | `sagemaker/` | Deployment packaging experiments, not the local final replay path |
+| Notebooks | `notebooks/` | Exploratory and evaluation support only |
 
-Committed/generated policy: Commit training code, configurations, and tests; do not commit datasets, model weights, checkpoints, or experiment outputs.
+Model weights, datasets, generated labels, and predictions belong in ignored
+`artifacts/` or `data/` directories. Do not add them to a public source release.
 
-Inputs: Approved dataset references, labels, and reusable feature contracts.
+Read [final model provenance](../docs/models/PROVENANCE_FINAL.md) before reporting a
+metric or distributing an artifact.
 
-Outputs: Reproducible training code, evaluation summaries, and model package specifications.
-
-Validation: `uv run pytest tests/architecture/test_repository_skeleton.py -v`
+Validation: `uv run pytest -q` and the package-specific commands in each training README.

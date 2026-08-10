@@ -100,7 +100,7 @@ def create_app(
             _LOGGER.removeHandler(log_handler)
             log_handler.close()
 
-    application = FastAPI(title="FleetIQ API", version="1.0.0", lifespan=lifespan)
+    application = FastAPI(title="FleetIQ API", version="1.1.0", lifespan=lifespan)
     application.state.settings = selected
     application.state.dependencies = dependencies
     application.add_middleware(

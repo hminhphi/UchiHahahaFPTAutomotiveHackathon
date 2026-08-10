@@ -42,11 +42,18 @@ export function TripOperationsView({
 
       <section className="report-grid">
         <article className="panel score-panel">
-          <span className="eyebrow">Safety score</span>
-          <div className="score-content">
-            <div className="score-ring" style={{ background: `conic-gradient(var(--blue) 0 ${trip.score}%, var(--orange) ${trip.score}% ${Math.min(100, trip.score + 8)}%, #e5eaf2 ${Math.min(100, trip.score + 8)}% 100%)` }}><strong>{trip.score}</strong><span>/100</span></div>
-            <div><h2>Auditable score signals</h2>{scoreSignals.map((signal) => <ScoreBar key={signal.label} {...signal} />)}</div>
-          </div>
+          <span className="eyebrow">Rule-based score</span>
+          {trip.score === null ? (
+            <div className="score-pending">
+              <h2>Analysis pending</h2>
+              <p>Evidence is available for review. The rule score appears after the trip artifact finishes processing.</p>
+            </div>
+          ) : (
+            <div className="score-content">
+              <div className="score-ring" style={{ background: `conic-gradient(var(--blue) 0 ${trip.score}%, var(--orange) ${trip.score}% ${Math.min(100, trip.score + 8)}%, #e5eaf2 ${Math.min(100, trip.score + 8)}% 100%)` }}><strong>{trip.score}</strong><span>/100</span></div>
+              <div><h2>Score breakdown</h2>{scoreSignals.map((signal) => <ScoreBar key={signal.label} {...signal} />)}</div>
+            </div>
+          )}
         </article>
         <article className="panel deductions-panel" aria-label="Frame-linked review">
           <span className="eyebrow">Evidence navigation</span>

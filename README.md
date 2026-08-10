@@ -3,375 +3,134 @@
 
 # FleetIQ Guardian
 
-**Remote driver intelligence and collision-risk platform for the FPT Automotive Hackathon 2026**
+**Remote driver intelligence and collision-risk evidence platform**
 
-![Python](https://img.shields.io/badge/Python-3.12-3776ab?style=flat-square&logo=python&logoColor=white)
-![uv](https://img.shields.io/badge/uv-workspace-222?style=flat-square)
-![Next.js](https://img.shields.io/badge/Next.js-dashboard-000?style=flat-square&logo=nextdotjs)
-![FastAPI](https://img.shields.io/badge/FastAPI-control_plane-009688?style=flat-square&logo=fastapi&logoColor=white)
-![AWS](https://img.shields.io/badge/AWS-ECS_EC2_%2B_SageMaker-ff9900?style=flat-square&logo=amazonaws&logoColor=white)
+Challenge #3 submission for FPT Automotive Hackathon 2026
 
-[Overview](#overview) - [Quick Start](#quick-start) - [Dataset](#dataset) - [Development](#development) - [Deployment](#deployment) - [Docs](#documentation)
+[Submission](#submission) | [Release](#release) | [Models](#models-and-runtime) | [Run locally](#reviewer-quick-start) | [Documentation](#documentation)
 
 </div>
 
-## Overview
+## What Reviewers See
 
-FleetIQ Guardian turns road-facing stereo cameras, driver camera signals, depth
-maps, calibration files, labels, and vehicle telemetry into a fleet safety
-dashboard. The judge-facing story is simple: identify the risky trip, explain
-why it is risky, show timestamped visual evidence, and produce a bounded
-coaching action.
-
-The submission targets **Challenge #3: Driver Intelligence Platform**. Challenge
-#1 safe-driving scoring and Challenge #2 collision-risk/TTC detection are built
-as core engines underneath the product.
-
-### What It Does
-
-| Capability | Output |
-| --- | --- |
-| Road-facing perception | Objects, lane/road mask, lane offset, depth, distance, tracking, TTC |
-| Driver monitoring | Driver state events for attention, drowsiness, and distraction workflows |
-| Telemetry analytics | Speeding, harsh brake, fast corner, acceleration, route trajectory coloured from blue (0 km/h) to red (100 km/h) |
-| Fusion and scoring | Unified risk events, trip score, explanations, coaching recommendations |
-| Fleet dashboard | Driver ranking, trip drill-down, timelines, evidence viewer, report panel |
-| CarSky HMI | Android Automotive coaching acknowledgement path for IVI demo |
-
-## Architecture
+FleetIQ Guardian turns multi-view road cameras, in-cabin driver signals, GT depth, and organizer telemetry into a reviewable trip workflow:
 
 ```text
-Road/driver cameras --WSS--> FastAPI control plane ----HTTP/WSS----> Next.js dashboard
-Vehicle telemetry -----MQTT--> Event gateway ----------MQTT--------> Fusion/scoring
-Frames and features ---------> Roadface + DMS workers --HTTPS------> SageMaker endpoints
-Coaching command ------HTTPS--> CarSky bridge ---------------------> Android Automotive HMI
+Fleet overview -> trip detail -> event timeline -> synchronized evidence -> coaching action
 ```
 
-> [!NOTE]
-> Local development uses Docker Compose for the API, dashboard, MQTT, database,
-> cache, model mock, and CarSky bridge. The intended cloud shape runs
-> frontend/backend on **ECS EC2** and model inference on **SageMaker**.
+The submission targets **Challenge #3: Driver Intelligence Platform**. Challenge #1 transparent scoring and Challenge #2 TTC/near-miss evidence are the product engines underneath it.
 
-Core protocols:
+![FleetIQ rule-based evidence architecture](docs/architecture/diagrams/12_rule_based_risk_architecture.png)
 
-| Protocol | Used for |
-| --- | --- |
-| HTTP/HTTPS | Health checks, trip queries, jobs, reports, coaching delivery |
-| WebSocket/WSS | Camera frame ingress and latest trip-state streams |
-| MQTT | Telemetry events, risk events, coaching commands, acknowledgements |
-| JSONL | Bounded offline worker input/output during hackathon development |
+The diagram source is [12_rule_based_risk_architecture.puml](docs/architecture/diagrams/12_rule_based_risk_architecture.puml). The event and coaching flow is documented in [13_rule_based_event_and_coaching.puml](docs/architecture/diagrams/13_rule_based_event_and_coaching.puml).
 
-See [system architecture](docs/architecture/system.md), [repository
-boundaries](docs/architecture/repository.md), and [protocol contracts](docs/protocols/README.md).
+## Submission
 
-## Repository Map
+| Deliverable | Canonical location | Status |
+| --- | --- | --- |
+| Final report | [docs/Automotive Hackthon - Final Vòng 2.docx.md](docs/Automotive%20Hackthon%20-%20Final%20V%C3%B2ng%202.docx.md) | Filled organizer template; team contact, video URL, and evidence URL must be completed before portal upload |
+| Final deck | [PPTX](docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pptx) and [PDF](docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pdf) | One reviewed 14-slide pair |
+| Prediction CSVs | `predictions/UchiHahaha/T01d.csv` through `T10d.csv` | Regenerated and validated from final artifacts |
+| Evidence and submission runbook | [docs/runbooks/full-evidence-flow.md](docs/runbooks/full-evidence-flow.md) | Rebuilds all ten trips and validates CSVs |
+| Upload workspace | `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final/` | Private packet, not a public source-release asset |
 
-```text
-apps/          Next.js web app, FastAPI API, CarSky Android HMI and bridge
-services/      Roadface, DMS, fusion, coaching, and MQTT gateway workers
-packages/      Shared contracts, dataset kit, model clients, observability
-ml/            Training jobs, notebooks, SageMaker handlers, model configs
-tools/         Dataset utilities, visualization tools, presentation helpers
-infra/         Docker Compose, Docker images, AWS CDK
-docs/          Architecture, runbooks, proposal, reports, references
-research/      Authored research notes; raw papers/clones stay local
-data/          Local organizer datasets, ignored by git
-artifacts/     Local generated outputs and model files, ignored by git
-```
+### Evidence Boundaries
 
-Each top-level work area has its own README with ownership, inputs, outputs, and
-validation notes.
+- Trip safety scores are deterministic `RiskScorer` outputs tied to evidence windows. They are **not** fleet rankings, fleet averages, blind-test accuracy, or organizer evaluation results.
+- Road TTC uses GT-depth ROI for retained ego-corridor detections. The fixed image corridor is a filtering heuristic, not a calibrated lane model.
+- DMS runtime uses MediaPipe face geometry with 15-frame smoothing. It is not the offline sequence-checkpoint runtime.
+- T08d road-left frame 1615 is a source gap and remains explicitly unavailable; the replay never substitutes a nearby frame.
 
-## Prerequisites
+## Reviewer Quick Start
 
-- Python `3.12`
-- [uv](https://docs.astral.sh/uv/)
-- Node.js `22`
-- pnpm `11`
-- Docker Desktop for Compose demos
-- NVIDIA GPU plus CUDA PyTorch only for heavyweight local perception
-- Optional Android SDK/Gradle for local CarSky HMI work
-- Optional AWS credentials and bootstrapped CDK account for cloud deployment
-
-Install dependencies:
+Prerequisites: Python 3.12, uv, Node.js 22, pnpm 11, Docker Desktop, approved organizer data, and the private runtime evidence package when reviewing generated artifacts.
 
 ```powershell
 uv sync --all-packages --group dev
 pnpm install --frozen-lockfile
-```
-
-Check the road-facing Python/CUDA environment when needed:
-
-```powershell
-uv run --package fleetiq-training-roadface python -m fleetiq_training_roadface.check_environment --probe-cuda
-```
-
-## Quick Start
-
-### 1. Run The Dashboard Locally
-
-Start the API:
-
-```powershell
-$env:FLEETIQ_TESTING = "true"; uv run --package fleetiq-api uvicorn fleetiq_api.main:create_app --factory --host 0.0.0.0 --port 8000
-```
-
-Start the web app in another terminal:
-
-```powershell
-pnpm --filter @fleetiq/web dev
-```
-
-Open:
-
-- Dashboard: <http://localhost:3000>
-- API docs: <http://localhost:8000/docs>
-
-The dashboard has fixture fallback data, so the product walkthrough still works
-before live perception output is available.
-
-To run a local historical replay without Docker/MinIO, enable the filesystem
-backend explicitly in the API terminal:
-
-```powershell
-$env:FLEETIQ_TESTING = "true"
-$env:FLEETIQ_REPLAY_ENABLED = "true"
-$env:FLEETIQ_MEDIA_BACKEND = "filesystem"
-$env:FLEETIQ_DATASET_ROOT = "data/Practice_Dataset/Practice_Dataset"
-uv run --package fleetiq-api uvicorn fleetiq_api.main:create_app --factory --host 0.0.0.0 --port 8000
-```
-
-### 2. Run The Full Local Stack
-
-Start Docker Desktop, then run:
-
-```powershell
 Copy-Item .env.example .env
-docker compose --profile full up --build
+docker compose --profile full up -d --build
 ```
 
-If port `3000` is already in use, set `FLEETIQ_WEB_PORT=3001` in `.env` and
-open <http://localhost:3001> instead.
+Open <http://localhost:3000/trips/T01d>. The expected path is:
 
-Run the protocol smoke test in another terminal:
+1. Inspect the completed rule score and its component breakdown.
+2. Select a consolidated event window from the timeline.
+3. Review synchronized road video, DMS state, depth/TTC, and telemetry at the same frame.
+4. Inspect the coaching context linked to the event evidence.
+
+Verify the final score artifact directly:
 
 ```powershell
-uv run --group dev python infra/compose/smoke_test.py
+curl.exe http://localhost:8000/api/v1/trips/T01d/analysis/fusion/summary
 ```
 
-Expected result: `8/8` covering API readiness, telemetry MQTT, model mock,
-risk MQTT, producer camera WebSocket framing, ordered historical replay,
-fleet/trajectory telemetry, and CarSky acknowledgement.
+For artifact regeneration, replay media, CSV export, and submission validation, follow [full-evidence-flow.md](docs/runbooks/full-evidence-flow.md). For a private reviewer handoff, follow [final-release.md](docs/runbooks/final-release.md).
 
-The first start mirrors the local Practice Dataset into MinIO and can take a
-few minutes. Once `minio-seed` reports success, open
-`http://localhost:3000/trips/T01-Sample`: the road-facing video replays from
-the `fleetiq-demo` bucket instead of a one-frame fixture. MinIO is available at
-`http://localhost:9001`; production uses the same S3-compatible interface with
-an AWS S3 bucket. The Trip Detail route moves its `NOW` vehicle marker and all
-telemetry cards from the binary replay frame index, not from a separate timer.
+## Models And Runtime
 
-Stop the stack:
+| Capability | Runtime source | Local artifact location | Release policy |
+| --- | --- | --- | --- |
+| Road objects | Precomputed `label2_yolo_v3` labels | `artifacts/training/roadface/train_runs/yolo26n_detached_v3/weights/best.pt` | Weights remain private unless redistribution is approved |
+| TTC distance | GT depth ROI on retained detections | `data/.../kitti/depth/` and `artifacts/trips/<trip>/analysis/road/` | Organizer data is never public |
+| DMS state | MediaPipe Face Landmarker, geometry rules, 15-frame smoothing | `artifacts/models/dms/face_landmarker.task` | Private runtime dependency |
+| Offline DMS checkpoint | Training/evaluation artifact, not the final dashboard runtime | `artifacts/models/dms/best_sequence_model.pt` | Do not use its metric as runtime performance |
+| Fusion score and coaching | Deterministic `RiskScorer` and event mapping | `artifacts/trips/<trip>/analysis/fusion/` | Trip evidence only; not a fleet-rank model |
 
-```powershell
-docker compose --profile full down
-```
+Read [final model provenance](docs/models/PROVENANCE_FINAL.md) before making model or performance claims.
 
-### 3. Run The Practice Dataset Viewer
+## Release
 
-List trips:
+`v1.1.0` is the final Round 2 source-release candidate.
 
-```powershell
-uv run --package fleetiq-training-roadface python tools/visualization/trip_player.py --list-trips
-```
+| Package | Audience | Contents | Command |
+| --- | --- | --- | --- |
+| GitHub source release | Public reviewers | Source code, committed documentation, final report source, and final deck | Tag and publish `v1.1.0` |
+| Runtime evidence handoff | Organizer-approved private reviewers | Models, generated trip artifacts, predictions, report, and submission workspace | `./tools/release/create_release_package.ps1 -Version v1.1.0 -PrivateReviewerHandoff` |
+| Portal packet | Automotive Hackathon reviewers | Report, final deck, ten CSVs, selected evidence, and video/link placeholders | `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final_READY_FOR_UPLOAD.zip` |
 
-Open a synchronized road/driver/stereo/depth/telemetry viewer:
+Do not publish organizer data, model weights, generated trip media, or the private runtime ZIP without explicit organizer approval.
 
-```powershell
-uv run --package fleetiq-training-roadface python tools/visualization/trip_player.py --trip T06-Sample --mode window
-```
-
-Run the road-facing lane/depth/tracking/TTC pipeline:
-
-```powershell
-uv run --package fleetiq-roadface fleetiq-roadface `
-  --dataset-root data/Practice_Dataset/Practice_Dataset `
-  --trip T06-Sample `
-  --detection-source labels_custom `
-  --lane-method plane `
-  --depth-source ground_truth `
-  --visualize
-```
-
-## Dataset
-
-Datasets are local-only and must not be committed. Put organizer data under:
+## Repository Map
 
 ```text
-data/
-  Practice_Dataset/
-    Practice_Dataset/
-      T01-Sample/
-        T01-Sample.json.gz
-        driver/
-        kitti/
-          image_2/
-          image_3/
-          depth/
-          calib/
-          label_2/
-          label2_custom/
-  Hackathon_Dataset_Redacted/
-    Hackathon_Dataset_Redacted/
-      T01d/
-      ...
+apps/        Next.js dashboard, FastAPI, and CarSky integration surface
+services/    Roadface, DMS, fusion, coaching, and event processing
+packages/    Shared contracts, data access, model clients, observability
+ml/          Offline training and evaluation code
+tools/       Dataset, visualization, presentation, and release automation
+docs/        Architecture, models, proposal, submission, demos, and runbooks
+artifacts/   Ignored local models and generated evidence
+data/        Ignored organizer datasets
 ```
 
-Useful signals already identified in the Practice Dataset:
-
-| Signal | Use |
-| --- | --- |
-| `kitti/image_2`, `kitti/image_3` | Rectified stereo road cameras |
-| `kitti/depth` | Ground-truth depth at lower frequency for validation/fallback |
-| `kitti/calib` | `fx=320`, `fy=320`, `cx=320`, `cy=180`, stereo baseline `0.30 m` |
-| Trip JSON telemetry | Speed, acceleration, yaw/pitch/roll, location, targets, TTC, risk |
-| `driver/` frames | In-cabin DMS evidence stream |
-| `kitti/label_2` and `label2_custom` | Original and relabeled road-object annotations |
-
-Read the full dataset audit in [docs/DATASET_SIGNAL_AUDIT.md](docs/DATASET_SIGNAL_AUDIT.md).
-
-## Perception Workflow
-
-Relabel Practice Dataset road objects into `kitti/label2_custom`:
-
-```powershell
-uv run --package fleetiq-training-roadface --extra models fleetiq-label-roadface --dataset practice --generation-mode slow --continue-on-error
-```
-
-Prepare, train, and evaluate road-facing models:
-
-```powershell
-uv run --package fleetiq-training-roadface fleetiq-prepare-roadface
-uv run --package fleetiq-training-roadface --extra models fleetiq-train-roadface
-uv run --package fleetiq-training-roadface fleetiq-evaluate-roadface
-```
-
-Run bounded worker entrypoints:
-
-```powershell
-uv run --package fleetiq-dms-worker fleetiq-dms-worker
-uv run --package fleetiq-fusion-worker fleetiq-fusion-worker
-uv run --package fleetiq-coaching-worker fleetiq-coaching-worker
-uv run --package fleetiq-event-gateway fleetiq-event-gateway
-```
-
-Roadface, DMS, fusion, and coaching workers are currently CLI/JSONL jobs. The
-event gateway is the long-running MQTT daemon.
-
-## Development
-
-Run the main quality gates before pushing shared work:
+## Quality Gates
 
 ```powershell
 uv lock --check
 uv run ruff check apps packages services ml infra tools
-uv run python -m pytest -v
+uv run pytest -q
 pnpm --filter @fleetiq/web lint
 pnpm --filter @fleetiq/web typecheck
 pnpm --filter @fleetiq/web test
 pnpm --filter @fleetiq/web build
+uv run python tools/dataset/validate_submission.py --predictions-dir predictions/UchiHahaha
 docker compose --profile full config
-uv run --group dev python infra/compose/smoke_test.py
 ```
-
-> [!IMPORTANT]
-> Cross-service payloads belong in `packages/contracts`. Do not import another
-> service's internal modules to share event shapes or API models.
-
-### Command Migration
-
-| Old location | Current command |
-| --- | --- |
-| `scripts/roadface/run_roadface_pipeline.py` | `uv run --package fleetiq-roadface fleetiq-roadface` |
-| `scripts/roadface/prepare_roadface_dataset.py` | `uv run --package fleetiq-training-roadface fleetiq-prepare-roadface` |
-| `scripts/roadface/train_roadface_models.py` | `uv run --package fleetiq-training-roadface fleetiq-train-roadface` |
-| `scripts/roadface/evaluate_roadface_outputs.py` | `uv run --package fleetiq-training-roadface fleetiq-evaluate-roadface` |
-| `scripts/roadface/relabel_locateanything.py` | `uv run --package fleetiq-training-roadface --extra models fleetiq-label-roadface` |
-| `scripts/render_trip_dashboard.py` | `tools/visualization/trip_player.py` |
-| `scripts/generate_dataset_notebooks.py` | `tools/dataset/generate_notebooks.py` |
-| `scripts/pptx/` | `tools/presentation/` |
-
-## Deployment
-
-Local profiles are documented in [infra/compose/README.md](infra/compose/README.md):
-
-| Profile | Starts |
-| --- | --- |
-| `core` | PostgreSQL, Redis, MQTT, API, web, event gateway |
-| `perception` | `core` plus local SageMaker-compatible model mock |
-| `full` | `perception` plus CarSky bridge |
-
-Cloud deployment is designed around:
-
-| Layer | Target |
-| --- | --- |
-| Frontend and API | ECS EC2 behind an HTTPS load balancer |
-| Detector, depth, lane, DMS inference | SageMaker endpoints |
-| Telemetry and vehicle events | AWS IoT Core/MQTT |
-| Runtime artifacts | S3 |
-| Secrets | AWS Secrets Manager |
-
-See [AWS deploy runbook](docs/runbooks/aws-deploy.md) and [CarSky deploy
-runbook](docs/runbooks/carsky-deploy.md).
-
-## Final Release
-
-The `v1.0.0` reviewer handoff separates source, local runtime artifacts, and
-organizer data. Follow [the final release runbook](docs/runbooks/final-release.md)
-to restore the evidence package and run the Docker dashboard. Build the local
-runtime archive with `./create_release_package.ps1`; do not distribute organizer
-data publicly without approval.
 
 ## Documentation
 
-- [Architecture](docs/architecture/README.md)
-- [Protocols](docs/protocols/README.md)
-- [Runbooks](docs/runbooks/README.md)
-- [CI validation](docs/runbooks/ci-validation.md)
-- [Proposal assets](docs/proposal/README.md)
-- [Dataset signal audit](docs/DATASET_SIGNAL_AUDIT.md)
-- [Demo guide and E2E acceptance](docs/demo/README.md)
-- [Road-facing training](ml/training/roadface/README.md)
-- [Visualization tools](tools/visualization/README.md)
+| Area | Purpose |
+| --- | --- |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [docs/submission/](docs/submission/README.md) | Final report, checklist, and packet manifest |
+| [docs/proposal/](docs/proposal/README.md) | Final judge-facing deck and export |
+| [docs/models/](docs/models/PROVENANCE_FINAL.md) | Runtime role, provenance, and disclosure |
+| [docs/runbooks/](docs/runbooks/README.md) | Regeneration, validation, and private release handoff |
+| [docs/demo/](docs/demo/README.md) | Final demo script and evidence flow |
+| [docs/architecture/](docs/architecture/README.md) | System boundaries and rule diagrams |
 
-## Team Ownership
+## Team
 
-| Member | GitHub | Primary boundary |
-| --- | --- | --- |
-| Phi | `hminhphi` | Road-facing camera, automotive integration, perception delivery |
-| Trung | `hoangtrung1801` | In-cabin DMS and driver-state CV |
-| Dung | `VKUNeMo` | AI agent/NLP and coaching intelligence |
-| Kha | `khaphan11` | CV/AI-ML training, depth, detection, lane evaluation |
-| Tu | `four2k3` | AI agent, backend/software integration, dashboard support |
-
-## Local Artifacts And Secrets
-
-Commit source, tests, lightweight configs, authored docs, and approved proposal
-artifacts. Keep these local-only:
-
-```text
-data/
-artifacts/models/
-artifacts/training/
-artifacts/predictions/
-artifacts/renders/
-artifacts/reports/
-artifacts/research-extracts/
-research/papers/raw/
-research/third-party/
-.env
-```
-
-LocateAnything-3B and similar research models may have non-commercial or
-research-only license terms. Verify every model and dataset license before any
-commercial claim.
+UchiHahaha: Phi, Trung, Dung, Kha, and Tu.

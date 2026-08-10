@@ -29,7 +29,7 @@ graph TD
 | 4 | `yaw` | Hướng đầu 3D | Góc xoay trái/phải từ `solvePnP`. |
 | 5 | `roll` | Hướng đầu 3D | Góc nghiêng đầu sang vai từ `solvePnP`. |
 | 6-10 | `delta_*` | Vận tốc | Tốc độ biến thiên thời gian $\Delta f_t = f_t - f_{t-1}$ cho EAR, MAR, Pitch, Yaw, Roll. |
-| 11-15 | `*_mean_5`, `ear_std_5` | Thống kê trượt | Trung bình động & độ lệch chuẩn trong cửa sổ 5 frames. |
+| 11-15 | `*_mean_5`, `ear_std_5` | Thống kê trượt | Trung bình động & độ lệch chuẩn trong cửa sổ 15 frames; giữ tên schema cũ để tương thích checkpoint. |
 | 16 | `brightness` | Biến động ảnh | Độ sáng trung bình toàn khung hình (chuẩn hóa $0 \to 1$). |
 | 17-18 | `motion_mean`, `motion_std` | Biến động chuyển động | Mức độ chuyển động pixel giữa 2 ảnh xám liên tiếp. |
 
@@ -44,7 +44,7 @@ graph TD
 
 ---
 
-## 📈 4. Kết Quả Huấn Luyện & Đánh Giá (Validation Results)
+## 📈 4. Historical Training Reference
 
 ```text
                precision    recall  f1-score   support
@@ -60,10 +60,11 @@ graph TD
  weighted avg     0.9385    0.9350    0.9358       600
 ```
 
-- **Validation Accuracy:** **93.50%**
-- **Macro F1-Score:** **0.9427**
-- **Speed:** **> 500 FPS trên CPU**
-- **Checkpoint size:** **~2.3 MB** tại `artifacts/models/dms/best_sequence_model.pt`
+The table above is a historical training artifact for the offline sequence
+checkpoint. It is not the final dashboard runtime and must not be used as a
+redacted-trip or production-runtime performance claim. The current model role,
+artifact policy, and disclosure boundary are defined in
+[PROVENANCE_FINAL.md](PROVENANCE_FINAL.md).
 
 ---
 

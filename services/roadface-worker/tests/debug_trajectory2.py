@@ -1,8 +1,11 @@
-import asyncio, json
+import asyncio
 from pathlib import Path
-from fleetiq_api.historical_replay import HistoricalTripRepository
 
-async def main():
+from fleetiq_api.historical_replay import HistoricalTripRepository
+from fleetiq_api.schemas import TrajectoryPoint
+
+
+async def main() -> None:
     repo = HistoricalTripRepository(None, artifacts_root=Path("/artifacts/trips"))
     data = repo._load_generated("T01d")
     print(f"Loaded: {data is not None}")
@@ -14,10 +17,11 @@ async def main():
             p0 = pts[0]
             print(f"active_event_types type: {type(p0.get('active_event_types'))}")
             print(f"events type: {type(p0.get('events'))}")
-            from fleetiq_api.schemas import TrajectoryPoint, TrajectoryData
             try:
                 tp = TrajectoryPoint(**p0)
                 print(f"OK: frame={tp.frame_index}")
-            except Exception as e:
-                print(f"TP ERROR: {e}")
+            except Exception as error:
+                print(f"TP ERROR: {error}")
+
+
 asyncio.run(main())
