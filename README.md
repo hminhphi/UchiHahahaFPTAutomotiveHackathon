@@ -38,10 +38,10 @@ The canonical walkthrough is T01d frame `1010`, produced by the full pipeline:
 
 | Deliverable | Location | Status |
 | --- | --- | --- |
-| Final report | [BTC template](docs/Automotive%20Hackthon%20-%20Final%20V%C3%B2ng%202.docx.md) | `v1.1.1`; contact and reviewer URLs still need final values |
+| Final report | [BTC template](docs/Automotive%20Hackthon%20-%20Final%20V%C3%B2ng%202.docx.md) | `v1.1.2`; contact and reviewer URLs still need final values |
 | Final deck | [PPTX](docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pptx) and [PDF](docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pdf) | Reviewed 14-slide pair |
 | Prediction CSVs | `predictions/UchiHahaha/T01d.csv` through `T10d.csv` | Ten files regenerated and validator-ready |
-| Demo video | [Placeholder and edit map](docs/submission/DEMO_VIDEO_PLACEHOLDER.md) | Reserved filename: `FleetIQ_Guardian_Round2_Demo.mp4` |
+| Demo video | [Caption and narration map](docs/submission/DEMO_VIDEO_CAPTIONS.md) | Local 04:08 MP4 recorded; reviewer URL and CSV-validator segment remain pending |
 | Private upload packet | `submission/UchiHahaha_FleetIQ_Guardian_Round2_Final_READY_FOR_UPLOAD.zip` | Local-only; refresh after adding the final MP4/URLs |
 
 ## Quick Start
@@ -67,12 +67,12 @@ uv run python tools/dataset/validate_submission.py --predictions-dir predictions
 
 ## Release
 
-`v1.1.1` is the final Round 2 source release. Public assets contain source,
+`v1.1.2` is the final Round 2 source release. Public assets contain source,
 documentation, and the final deck only. The private reviewer package contains local
 models and generated evidence and must not be published without organizer approval.
 
 ```powershell
-./tools/release/create_release_package.ps1 -Version v1.1.1 -PrivateReviewerHandoff
+./tools/release/create_release_package.ps1 -Version v1.1.2 -PrivateReviewerHandoff
 ```
 
 > [!CAUTION]

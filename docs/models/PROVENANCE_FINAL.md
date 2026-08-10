@@ -3,7 +3,7 @@
 ## Purpose
 
 This document is the release authority for model roles and claims in the final
-FleetIQ Guardian Round 2 build (`v1.1.1`). It prevents an offline training metric, a generated
+FleetIQ Guardian Round 2 build (`v1.1.2`). It prevents an offline training metric, a generated
 label, and a runtime signal from being described as the same thing.
 
 ## Runtime Components
