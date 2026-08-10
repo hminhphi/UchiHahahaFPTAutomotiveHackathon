@@ -19,6 +19,35 @@ Giải pháp phân loại 5 trạng thái tài xế (`alert`, `distracted`, `dro
 
 ## 🚀 Hướng Dẫn Sử Dụng (Usage & Commands)
 
+### 0. Download Vicomtech DMD data
+
+Save the forwarded Vicomtech links as plain text (the signed URLs expire), then run:
+
+```bash
+uv run --package fleetiq-training-dms fleetiq-download-dms \
+  --manifest /path/to/vicomtech-dms-links.txt
+```
+
+Add `--convert-to-json` to create a grouped `.json` manifest beside the text
+file and download using that JSON.
+
+The script extracts drowsiness data to `data/dmd/drowsiness/`, distraction data to
+`data/dmd/distraction/`, and keeps archives under `data/dmd/.archives/`. Use
+`--dataset drowsiness` or `--dataset distraction` to download only one group.
+Use `--delete-archives` when disk space is limited.
+
+### 0.1 Prepare face videos for training
+
+Only `*_rgb_face.mp4` files are read; frames are streamed into the existing 18-feature CSV format.
+
+```bash
+uv run --package fleetiq-training-dms fleetiq-prepare-vicomtech-dms \
+  --data-root data/DMD
+
+uv run --package fleetiq-training-dms fleetiq-train-dms \
+  --feature-dir artifacts/training/dms/vicomtech_features
+```
+
 ### 1. Trích xuất đặc trưng & Huấn luyện mô hình (Training)
 
 Chạy huấn luyện mô hình với chiến lược Temporal Block Split (80% past train / 20% future val):

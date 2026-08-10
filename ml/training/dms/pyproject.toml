@@ -21,6 +21,8 @@ fleetiq-train-dms = "fleetiq_training_dms.train:main"
 fleetiq-evaluate-dms = "fleetiq_training_dms.evaluate:main"
 fleetiq-predict-dms = "fleetiq_training_dms.predict:main"
 fleetiq-train-dms-generalized = "fleetiq_training_dms.train_generalized:main"
+fleetiq-download-dms = "fleetiq_training_dms.download_dataset:main"
+fleetiq-prepare-vicomtech-dms = "fleetiq_training_dms.prepare_vicomtech:main"
 
 [tool.uv.sources]
 fleetiq-contracts = { workspace = true }
