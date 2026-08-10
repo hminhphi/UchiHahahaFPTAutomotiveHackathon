@@ -15,7 +15,7 @@
 
 ## You Must Do
 
-1. Điền tên/email đại diện, video URL, evidence URL và timestamp thật trong report theo template BTC.
+1. Điền tên/email đại diện, video URL, evidence URL và timestamp thật trong report theo template BTC. Tên video đã giữ sẵn là `FleetIQ_Guardian_Round2_Demo.mp4`; mọi mốc `MỐC MOCK` phải được thay trước khi nộp.
 2. Keep the official folder as `predictions/UchiHahaha/`. Keep the files named exactly `T01d.csv` through `T10d.csv`.
 3. Re-run the validator immediately before upload:
 
@@ -34,7 +34,7 @@
 
 - Do not call redacted-trip TTC, driver state, or risk outputs ground truth.
 - Do not claim YOLOP as the primary object detector.
-- Do not hide the T01d frame-551 overlapping pedestrian prediction.
+- Do not present a static screenshot without its matching frame artifact and CSV row.
 - Do not claim Android Automotive end-to-end behavior without recording it.
 - Do not upload a CSV with invalid driver states such as `attentive` or `unknown`; the validator prevents this.
 - Do not present a deterministic trip rule score as fleet ranking, fleet average, or blind-test accuracy.

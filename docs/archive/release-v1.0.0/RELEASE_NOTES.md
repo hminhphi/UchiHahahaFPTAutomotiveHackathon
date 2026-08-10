@@ -9,7 +9,7 @@ FleetIQ Guardian is the UchiHahaha final release for Automotive Hackathon 2026. 
 - Ten-trip fleet dashboard with ranked risk queue and T01d trip drill-down.
 - Synchronized road-left replay, road-right, driver, depth, DMS, road, and fusion evidence routes.
 - Custom YOLO v3 road-object labels on 17,999 redacted-trip frames.
-- T01d frame 551 motorcycle evidence with depth-derived distance.
+- T01d selected road evidence with depth-derived distance.
 - Ten organizer-format CSVs in `predictions/UchiHahaha/`, each validated with 1,800 rows.
 - Full-GT `T01-Sample` organizer evaluation evidence.
 - Docker Compose local stack and smoke-tested browser workflow.
@@ -30,6 +30,6 @@ The runtime package includes selected model weights, generated trip artifacts, e
 ## Known Limits
 
 - Scored-trip ground truth is redacted, so local blind-test accuracy must not be claimed.
-- T01d frame 551 includes an overlapping pedestrian false positive alongside the motorcycle detection.
+- Selected road evidence may include overlapping detections; inspect the linked artifact before assigning coaching.
 - YOLOP provides road/lane masks only and is not the primary object detector.
 - CarSky bridge is packaged; Android Automotive end-to-end HMI proof remains a separate evidence requirement.

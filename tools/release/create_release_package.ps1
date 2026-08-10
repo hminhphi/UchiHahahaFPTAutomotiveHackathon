@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "v1.1.0",
+    [string]$Version = "v1.1.1",
     [switch]$PrivateReviewerHandoff,
     [switch]$IncludeDataset,
     [switch]$IncludeYolopMasks,

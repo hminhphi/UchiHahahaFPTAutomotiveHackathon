@@ -18,9 +18,9 @@ Automotive Hackathon 2026
 | :---- | :---- |
 | **Đại diện / email Đội trưởng** | `[CẦN TEAM XÁC NHẬN TRƯỚC KHI UPLOAD]` |
 | **Tên solution** | FleetIQ Guardian: Remote Driver Intelligence and Collision Risk Platform |
-| **Mốc bản được báo cáo** | `v1.1.0`, 2026-08-10 |
+| **Mốc bản được báo cáo** | `v1.1.1`, 2026-08-11 |
 | **Final report** | `Automotive_Hackathon_Final_Report_R2.md` |
-| **Video demo dùng để chấm** | `[CẦN DÁN URL REVIEWER-ACCESSIBLE]` |
+| **Video demo dùng để chấm** | `FleetIQ_Guardian_Round2_Demo.mp4` `[SẼ UPLOAD; URL REVIEWER-ACCESSIBLE CẦN THAY TRƯỚC KHI NỘP]` |
 | **Evidence Folder** | `[CẦN DÁN URL REVIEWER-ACCESSIBLE]` |
 | **Hướng giải pháp liên quan** | Digital Cockpit; Connected Car Services; Vehicle Middleware; AI-assisted safety analytics |
 
@@ -88,7 +88,7 @@ Automotive Hackathon 2026
 | **Kết quả quan sát** | Artifact cuối của T01d có risk `19.9`, safety `80.1`. Trên browser hiển thị `80/100`, với các phần `98/85/97/100`. |
 | **Trạng thái** | Real |
 | **Evidence locator** | `GET /api/v1/trips/T01d/analysis/fusion/summary`; `artifacts/trips/T01d/analysis/fusion/summary.json`; `http://localhost:3000/trips/T01d` |
-| **Video timestamp** | `[CẦN ĐIỀN SAU KHI RECORD]` |
+| **Video timestamp** | `00:12-00:28` `[MỐC MOCK; thay bằng timestamp của video final]` |
 | **Caveat / giới hạn** | Đây là điểm theo rule cho từng trip. Nó không dùng để xếp hạng fleet, tính điểm trung bình fleet, hay nói thay cho blind-test accuracy và organizer score. |
 
 **OUTPUT O2 — DMS timeline đã gộp event**
@@ -99,19 +99,19 @@ Automotive Hackathon 2026
 | **Kết quả quan sát** | Lần chạy cuối cho toàn bộ T01d-T10d tạo 61 DMS window. Không window nào ngắn hơn 15 frame. |
 | **Trạng thái** | Real |
 | **Evidence locator** | `artifacts/trips/<trip>/analysis/fusion/events.json`; `services/roadface-worker/tests/generate_ai_artifacts.py`; `docs/models/PROVENANCE_FINAL.md` |
-| **Video timestamp** | `[CẦN ĐIỀN SAU KHI RECORD]` |
+| **Video timestamp** | `00:28-00:43` `[MỐC MOCK; thay bằng timestamp của video final]` |
 | **Caveat / giới hạn** | Runtime state đến từ MediaPipe geometry với smoothing 15 frame. Nhóm không dùng metric checkpoint offline để gọi đây là runtime accuracy. |
 
-**OUTPUT O3 — Bằng chứng rủi ro đường tại frame 551 của T01d**
+**OUTPUT O3 — Khung evidence hợp nhất T01d/1010**
 
-| Claim / outcome | Road artifact chỉ giữ object nằm trong ego corridor, sau đó liên kết object đó với GT-depth ROI và TTC evidence. |
+| Claim / outcome | Cùng một khung hình có thể được đọc từ road overlay, DMS, fusion và CSV sau full pipeline, thay vì dùng ảnh minh họa rời rạc. |
 | :---- | :---- |
-| **Điều kiện xác định đạt** | `T01d` frame `551` có `Motorcycle` detection với non-null depth distance. |
-| **Kết quả quan sát** | `Motorcycle`, confidence `0.3941`, bbox `(308.30,196.14)-(345.92,268.97)`, depth distance khoảng `5.02 m`. |
+| **Điều kiện xác định đạt** | `T01d` frame `1010` có in-lane `Car` với GT-depth ROI và TTC; DMS/fusion artifact cùng frame tồn tại; CSV row cùng index khớp TTC, state và risk. |
+| **Kết quả quan sát** | Road: `Car`, confidence `0.8837`, distance `20.40 m`, TTC `1.601 s`. DMS: `drowsy`, confidence `0.85`. Fusion: risk `51.0`, safety `49`, event codes `high_ttc_risk`, `driver_drowsiness`, `compound_risk`. CSV: `1010,50.500,1.601,drowsy,51.0`. |
 | **Trạng thái** | Real |
-| **Evidence locator** | `artifacts/trips/T01d/analysis/road/000551.json`; `docs/proposal/UchiHahaha_FleetIQGuardian_Final_Round2.pdf` slide 6 |
-| **Video timestamp** | `[CẦN ĐIỀN SAU KHI RECORD]` |
-| **Caveat / giới hạn** | Frame này có thêm một pedestrian prediction chồng lên motorcycle do LocateAnything label conflict. Nhóm giữ lại false positive này để reviewer thấy giới hạn. TTC ở đây là GT-depth ROI proxy, không phải learned depth. |
+| **Evidence locator** | `artifacts/trips/T01d/analysis/road/001010.json`; `analysis/dms/001010.json`; `analysis/fusion/001010.json`; `artifacts/training/roadface/yolop_panoptic/T01d/overlays/001010.png`; `predictions/UchiHahaha/T01d.csv` row `1010`; final deck slide 6 |
+| **Video timestamp** | `00:43-01:02` `[MỐC MOCK; thay bằng timestamp của video final]` |
+| **Caveat / giới hạn** | TTC là GT-depth ROI proxy, không phải learned depth. Road object là label được giữ trong fixed image corridor `x=250..390`, không phải calibrated lane model. |
 
 **OUTPUT O4 — CSV đúng định dạng BTC**
 
@@ -121,7 +121,7 @@ Automotive Hackathon 2026
 | **Kết quả quan sát** | Nhóm export lại 10 CSV từ artifact cuối và validator đều pass. Số finite TTC row lần lượt là T01d `176`, T02d `374`, T03d `85`, T04d `95`, T05d `478`, T06d `255`, T07d `67`, T08d `88`, T09d `234`, T10d `483`. |
 | **Trạng thái** | Real |
 | **Evidence locator** | `predictions/UchiHahaha/T01d.csv` through `T10d.csv`; `tools/dataset/validate_submission.py` |
-| **Video timestamp** | `[CẦN ĐIỀN SAU KHI RECORD]` |
+| **Video timestamp** | `01:02-01:17` `[MỐC MOCK; thay bằng timestamp của video final]` |
 | **Caveat / giới hạn** | Ground truth cho redacted trips không có local; không suy diễn challenge accuracy trước organizer evaluation. |
 
 *Đội có thể copy, rút gọn, gộp hoặc thay block này bằng cấu trúc riêng. Không có ngưỡng tối đa ba output.*
@@ -188,9 +188,10 @@ Automotive Hackathon 2026
 | :---- | :---- | :---- | :---- |
 | **CÓ THỂ ĐỀ CẬP** **•** Input/data và precondition cần để hiểu demo. **•** Core flow và các output chính, ưu tiên mapping theo Output ID. **•** Timestamp map để reviewer tìm evidence nhanh. **•** Edge/failure case nếu nó quan trọng với claim. **•** Disclosure phần mock/simulated/manual hoặc edit/cut. |  |  |  |
 | **Output ID** | **Timestamp** | **Điều cần quan sát** | **Ghi chú / disclosure** |
-| O1 | `[CẦN ĐIỀN]` | Mở T01d, xem Rule score `80/100` và phần điểm thành phần | Artifact đã chạy trước; không phải fleet ranking |
-| O2 | `[CẦN ĐIỀN]` | Chọn một DMS event đã gộp, rồi xem driver/road/telemetry cùng frame | MediaPipe geometry runtime, smoothing 15 frame, gộp state lặp trong 5 giây |
-| O3/O4 | `[CẦN ĐIỀN]` | Xem motorcycle ở frame 551, sau đó mở 10 CSV và validator | Depth ROI proxy; redacted-trip evaluation vẫn do organizer thực hiện |
+| O1 | `00:12-00:28` `[MỐC MOCK]` | Mở T01d, xem Rule score `80/100` và phần điểm thành phần | Artifact đã chạy trước; không phải fleet ranking |
+| O2 | `00:28-00:43` `[MỐC MOCK]` | Chọn một DMS event đã gộp, rồi xem driver/road/telemetry cùng frame | MediaPipe geometry runtime, smoothing 15 frame, gộp state lặp trong 5 giây |
+| O3 | `00:43-01:02` `[MỐC MOCK]` | Mở frame `1010`: overlay road, DMS drowsy, TTC và fused risk cùng frame | GT-depth ROI proxy; fixed corridor không phải calibrated lane model |
+| O4 | `01:02-01:17` `[MỐC MOCK]` | Mở row `1010` rồi chạy validator cho 10 CSV | Redacted-trip evaluation vẫn do organizer thực hiện |
 
 *Có thể thêm, bớt hoặc thay bảng trên bằng chapter/timestamp list của đội; không giới hạn ba dòng.*
 
@@ -213,7 +214,7 @@ Automotive Hackathon 2026
 
 *Đội tự chọn cách trình bày: đoạn văn, sơ đồ, bảng, ảnh hoặc link evidence.*
 
-| Hãy kiểm tra score T01d và `Fused analysis: Ready`. Chọn một DMS event để chắc rằng frame navigation đúng. Mở frame 551 để xem motorcycle evidence. Sau đó chạy `uv run python tools/dataset/validate_submission.py --predictions-dir predictions/UchiHahaha`. Nếu muốn claim CarSky, cần kiểm tra và record Android HMI riêng. |
+| Hãy kiểm tra score T01d và `Fused analysis: Ready`. Chọn compound-risk event ở frame `1010`, rồi đối chiếu overlay road, DMS, fusion artifact và CSV row cùng frame. Sau đó chạy `uv run python tools/dataset/validate_submission.py --predictions-dir predictions/UchiHahaha`. Nếu muốn claim CarSky, cần kiểm tra và record Android HMI riêng. |
 | :---- |
 
 **Xác nhận của đội**
