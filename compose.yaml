@@ -119,6 +119,8 @@ services:
       FLEETIQ_OBJECT_STORAGE_BUCKET: ${FLEETIQ_OBJECT_STORAGE_BUCKET:-fleetiq-demo}
       FLEETIQ_OBJECT_STORAGE_ACCESS_KEY: ${FLEETIQ_OBJECT_STORAGE_ACCESS_KEY:-fleetiq-local}
       FLEETIQ_OBJECT_STORAGE_SECRET_KEY: ${FLEETIQ_OBJECT_STORAGE_SECRET_KEY:-fleetiq-local-secret}
+      FLEETIQ_ARTIFACTS_ROOT: /artifacts/trips
+      FLEETIQ_YOLOP_ARTIFACT_ROOT: /artifacts/training/roadface/yolop_panoptic
     ports:
       - "${FLEETIQ_API_PORT:-8000}:8000"
     volumes:

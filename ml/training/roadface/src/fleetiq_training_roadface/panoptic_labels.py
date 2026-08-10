@@ -394,7 +394,10 @@ class YolopPanopticModel:
         self.max_det = int(args.max_det)
         self.class_name_override = args.class_names
         self.keep_traffic_control = bool(args.keep_traffic_control)
-        self.model = torch.hub.load("hustvl/yolop", "yolop", pretrained=True)
+        # The fixed upstream repository is required for unattended batch labeling.
+        self.model = torch.hub.load(
+            "hustvl/yolop", "yolop", pretrained=True, trust_repo=True
+        )
         self.model.to(self.device).eval()
 
     def _preprocess(self, image_bgr: np.ndarray) -> tuple[object, tuple[int, int], tuple[float, float], tuple[float, float]]:

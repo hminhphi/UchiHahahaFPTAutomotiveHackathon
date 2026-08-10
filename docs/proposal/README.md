@@ -6,7 +6,13 @@ PDF.
 Owner: Product and Pitch Lead.
 
 The PPTX is the editable source; the PDF is the presentation-safe export.
-Generated slide assets and temporary renders belong in
-`artifacts/presentations/`, not this directory.
+Persistent final-deck source images belong in `assets/`; temporary renders
+belong in `artifacts/presentations/`.
 
 Use `tools/presentation/` for proposal asset and deck automation.
+
+Regenerate the final judge deck with:
+
+```powershell
+pnpm deck:final
+```

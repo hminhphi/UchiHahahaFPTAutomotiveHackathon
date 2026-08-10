@@ -95,11 +95,12 @@ class FilesystemTripMediaStore:
 class S3TripMediaStore:
     """MinIO and AWS S3 adapter. Object keys are kept independent of the vendor."""
 
-    def __init__(self, settings: ApiSettings) -> None:
+    def __init__(self, settings: ApiSettings, artifact_root: Path | None = None) -> None:
         self._bucket = settings.object_storage_bucket
         self._endpoint = urlsplit(settings.object_storage_endpoint or "")
         self._access_key = settings.object_storage_access_key or ""
         self._secret_key = settings.object_storage_secret_key or ""
+        self._artifact_root = artifact_root
 
     async def list_trip_ids(self) -> tuple[str, ...]:
         return await asyncio.to_thread(self._list_trip_ids)
@@ -138,6 +139,10 @@ class S3TripMediaStore:
         return await asyncio.to_thread(self._read, frame.location)
 
     async def read_trip_document(self, trip_id: str) -> dict[str, object]:
+        if self._artifact_root is not None:
+            artifact_path = self._artifact_root / trip_id / f"{trip_id}.json.gz"
+            if artifact_path.is_file():
+                return await asyncio.to_thread(_read_trip_document, artifact_path.read_bytes())
         contents = await asyncio.to_thread(self._read, f"trips/{trip_id}/{trip_id}.json.gz")
         return _read_trip_document(contents)
 
@@ -333,7 +338,10 @@ def create_historical_dependencies(
 ) -> tuple[TripRepository, HistoricalCameraReplay, TripTrajectoryRepository, TripFrameReader]:
     media: TripMediaStore
     if settings.media_backend == "s3":
-        media = S3TripMediaStore(settings)
+        artifact_root = Path(
+            __import__("os").environ.get("FLEETIQ_ARTIFACTS_ROOT", "artifacts/trips")
+        )
+        media = S3TripMediaStore(settings, artifact_root)
     else:
         media = FilesystemTripMediaStore(
             settings.dataset_root,

@@ -8,6 +8,7 @@ import "./styles.css";
 export const metadata: Metadata = {
   title: "FleetIQ Guardian",
   description: "Remote driver intelligence and collision risk operations console",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

@@ -1,8 +1,4 @@
-"""Generate per-frame AI analysis artifacts from existing telemetry data.
-
-Creates road/dms/fusion JSON for each frame + summary for each trip.
-Uses existing road labels (locateanything) + telemetry + DMS pseudo-labels.
-"""
+"""Generate per-frame AI analysis artifacts from telemetry, YOLO, and DMS."""
 
 from __future__ import annotations
 
@@ -74,6 +70,7 @@ def parse_kitti_label(path: Path) -> list[dict]:
                 obj["y"] = float(parts[12])
                 obj["z"] = float(parts[13])
                 obj["ry"] = float(parts[14])
+                obj["confidence"] = float(parts[15])
             objects.append(obj)
         except (ValueError, IndexError):
             continue
@@ -148,7 +145,7 @@ def generate_road_frame(frame_idx: int, kitti_objects: list[dict], ego_speed_kmh
                 "x_max": obj["x2"],
                 "y_max": obj["y2"],
             },
-            "confidence": 0.85,
+            "confidence": obj.get("confidence", 1.0),
             "distance_m": distance,
             "relative_speed_mps": ego_speed_kmh / 3.6,
             "relative_accel_mps2": 0.0,
@@ -160,7 +157,7 @@ def generate_road_frame(frame_idx: int, kitti_objects: list[dict], ego_speed_kmh
         })
     return {
         "frame_index": frame_idx,
-        "producer": "yolo26n_fleetiq",
+        "producer": "yolo26n-detached-v3",
         "detections": detections,
         "lane_state": {
             "detected": in_lane_count > 0,
@@ -303,7 +300,7 @@ def load_trajectory_json(trip_dir: Path) -> list[dict] | None:
     return data.get("frames", [])
 
 
-def generate_for_trip(trip_dir: Path, output_dir: Path) -> dict:
+def generate_for_trip(trip_dir: Path, output_dir: Path, label_dir_name: str) -> dict:
     trip_id = trip_dir.name  # T01d, T02d, etc. — match what /api/v1/trips returns
     print(f"Processing {trip_dir.name} -> {trip_id}")
 
@@ -321,7 +318,7 @@ def generate_for_trip(trip_dir: Path, output_dir: Path) -> dict:
                 "driver_alertness": pt.get("driver_alertness"),
             })
 
-    label_dir = trip_dir / "kitti" / "label2_custom"
+    label_dir = trip_dir / "kitti" / label_dir_name
     trip_output = output_dir / trip_id / "analysis"
     (trip_output / "road").mkdir(parents=True, exist_ok=True)
     (trip_output / "dms").mkdir(parents=True, exist_ok=True)
@@ -365,20 +362,28 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset-root", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--label-dir-name", default="label2_yolo_v3")
+    parser.add_argument("--trip", action="append", help="Trip ID; repeat as needed.")
     args = parser.parse_args()
 
     if not args.dataset_root.is_dir():
         print(f"Dataset root not found: {args.dataset_root}", file=sys.stderr)
         sys.exit(1)
 
-    trip_dirs = sorted([d for d in args.dataset_root.iterdir() if d.is_dir() and d.name.startswith("T")])
+    requested = {trip.casefold() for trip in args.trip or []}
+    trip_dirs = sorted(
+        d
+        for d in args.dataset_root.iterdir()
+        if d.is_dir() and d.name.startswith("T")
+        and (not requested or d.name.casefold() in requested)
+    )
     if not trip_dirs:
         print("No trip directories found", file=sys.stderr)
         sys.exit(1)
 
     print(f"Processing {len(trip_dirs)} trips...")
     for trip_dir in trip_dirs:
-        generate_for_trip(trip_dir, args.output_dir)
+        generate_for_trip(trip_dir, args.output_dir, args.label_dir_name)
     print("Done.")
 
 

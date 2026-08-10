@@ -7,6 +7,7 @@ export interface TripEvidence {
   label: string;
   severity: 1 | 2 | 3 | 4 | 5;
   time: string;
+  view?: "driver" | "road";
 }
 
 export interface TripScoreSignal {
@@ -28,8 +29,10 @@ export function buildTripEvidence(trajectory: TripTrajectory | null): TripEviden
     .slice(0, 3);
 }
 
-export function buildTripScoreSignals(summary: FusionTripSummary | null): TripScoreSignal[] {
-  const scores = summary?.componentSafetyScores;
+export function buildTripScoreSignals(summary: FusionTripSummary | TripTrajectory | null): TripScoreSignal[] {
+  const scores = summary && "componentSafetyScores" in summary
+    ? summary.componentSafetyScores
+    : undefined;
   return [
     {
       label: "Collision margin",
@@ -104,6 +107,16 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
         ? "Driver-state telemetry"
         : `Alertness ${Math.round(point.driverAlertness * 100)}%`,
       severity: point.driverState === "drowsy" ? 4 : 3,
+    });
+  }
+  if (point.phoneUse === true) {
+    evidence.push({
+      frameIndex: point.frameIndex,
+      time,
+      label: "Phone use detected",
+      detail: "Driver camera phone-use signal",
+      severity: 3,
+      view: "driver",
     });
   }
   if (point.simulatorRiskScore !== null && point.simulatorRiskScore >= 80) {

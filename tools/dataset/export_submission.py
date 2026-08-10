@@ -158,23 +158,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         default=Path("data/Hackathon_Dataset_Redacted/Hackathon_Dataset_Redacted"),
     )
     parser.add_argument(
-        "--dms-checkpoint",
+        "--artifact-root",
         type=Path,
-        default=None,
-        help="Trained DMS checkpoint. Required unless --dms-source pseudo_label.",
-    )
-    parser.add_argument(
-        "--dms-source",
-        choices=("model", "pseudo_label"),
-        default="model",
-        help="pseudo_label uses the rule-based geometry labels as a stopgap "
-        "before a trained checkpoint exists.",
-    )
-    parser.add_argument(
-        "--yolo-weights",
-        type=Path,
-        default=None,
-        help="YOLO weights for TTC detection. Defaults to yolo_detector.py's built-in path.",
+        default=Path("artifacts/trips"),
+        help="Root containing refreshed road, DMS, and fusion artifacts.",
     )
     parser.add_argument(
         "--output-root",
@@ -186,7 +173,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
-    from tools.dataset.export_submission_pipeline import export_trip
+    try:
+        from tools.dataset.export_submission_pipeline import export_trip
+    except ModuleNotFoundError:
+        from export_submission_pipeline import export_trip
 
     for trip_id in args.trip:
         output_path = args.output_root / args.team / f"{trip_id}.csv"
@@ -194,9 +184,7 @@ def main(argv: list[str] | None = None) -> int:
             trip_id=trip_id,
             dataset_root=args.dataset_root,
             output_path=output_path,
-            dms_checkpoint=args.dms_checkpoint,
-            dms_source=args.dms_source,
-            yolo_weights=args.yolo_weights,
+            artifact_root=args.artifact_root,
         )
         print(f"Wrote {output_path}")
     return 0

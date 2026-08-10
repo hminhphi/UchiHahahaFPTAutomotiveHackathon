@@ -39,6 +39,7 @@ export interface TrajectoryPoint {
   minTtcS: number | null;
   headwayS: number | null;
   driverState: string;
+  phoneUse?: boolean | null;
   driverAlertness: number | null;
   simulatorRiskScore: number | null;
   activeEventTypes: string[];

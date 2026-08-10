@@ -30,6 +30,7 @@ interface ApiTrajectoryPoint {
   min_ttc_s: number | null;
   headway_s: number | null;
   driver_state: string;
+  phone_use: boolean | null;
   driver_alertness: number | null;
   simulator_risk_score: number | null;
   active_event_types: string[];
@@ -270,6 +271,7 @@ export async function getTripTrajectory(tripId: string): Promise<TripTrajectory 
         minTtcS: point.min_ttc_s,
         headwayS: point.headway_s,
         driverState: point.driver_state,
+        phoneUse: point.phone_use,
         driverAlertness: point.driver_alertness,
         simulatorRiskScore: point.simulator_risk_score,
         activeEventTypes: point.active_event_types,

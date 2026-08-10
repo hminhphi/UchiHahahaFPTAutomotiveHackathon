@@ -324,6 +324,14 @@ Cloud deployment is designed around:
 See [AWS deploy runbook](docs/runbooks/aws-deploy.md) and [CarSky deploy
 runbook](docs/runbooks/carsky-deploy.md).
 
+## Final Release
+
+The `v1.0.0` reviewer handoff separates source, local runtime artifacts, and
+organizer data. Follow [the final release runbook](docs/runbooks/final-release.md)
+to restore the evidence package and run the Docker dashboard. Build the local
+runtime archive with `./create_release_package.ps1`; do not distribute organizer
+data publicly without approval.
+
 ## Documentation
 
 - [Architecture](docs/architecture/README.md)

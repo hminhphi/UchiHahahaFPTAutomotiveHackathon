@@ -1,0 +1,68 @@
+{
+  "n_trips": 1,
+  "overall_mae_critical": 19.612,
+  "overall_inv_ttc_mae": 0.1483,
+  "overall_f1": 0.24,
+  "overall_composite_score": 28.3,
+  "ranking": [
+    {
+      "trip_id": "T01-Sample",
+      "score": 28.3
+    }
+  ],
+  "per_trip": [
+    {
+      "trip_id": "T01-Sample",
+      "n_frames": 600,
+      "n_finite_gt": 57,
+      "n_critical_zone": 12,
+      "n_danger_zone": 10,
+      "mae_overall": 56.54,
+      "mae_critical": 19.612,
+      "rmse_critical": 40.304,
+      "inv_ttc_mae": 0.1483,
+      "precision": 0.15,
+      "recall": 0.6,
+      "f1": 0.24,
+      "false_positive_rate": 0.058,
+      "accuracy": 0.937,
+      "composite_score": 28.3
+    }
+  ],
+  "challenge2": {
+    "overall_composite_score": 41.7,
+    "per_trip": [
+      {
+        "trip_id": "T01-Sample",
+        "n_frames_scored": 600,
+        "accuracy": 0.5,
+        "macro_f1": 0.334,
+        "per_class_f1": {
+          "alert": 0.667,
+          "drowsy": 0.0,
+          "yawning": 0.0,
+          "distracted": 0.0,
+          "microsleep": 0.0
+        },
+        "composite_score": 41.7
+      }
+    ]
+  },
+  "challenge3": {
+    "overall_composite_score": 100.0,
+    "per_trip": [
+      {
+        "trip_id": "T01-Sample",
+        "predicted_safe_score": 0.0,
+        "true_safe_score": 0.0,
+        "abs_error": 0.0,
+        "composite_score": 100.0,
+        "near_miss_count": 13,
+        "harsh_brake_count": 14,
+        "harsh_accel_count": 53,
+        "harsh_corner_count": 2,
+        "speeding_pct_time": 0.0
+      }
+    ]
+  }
+}

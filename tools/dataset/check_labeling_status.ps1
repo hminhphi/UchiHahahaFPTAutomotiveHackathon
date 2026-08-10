@@ -9,10 +9,10 @@
   most recent log lines and any errors recorded in the raw JSONL sidecars.
 
 .EXAMPLE
-  pwsh -File scripts/check-labeling-status.ps1
+  pwsh -File tools/dataset/check_labeling_status.ps1
 
 .EXAMPLE
-  pwsh -File scripts/check-labeling-status.ps1 -Watch
+  pwsh -File tools/dataset/check_labeling_status.ps1 -Watch
   Refreshes every 60 seconds until the run finishes.
 #>
 [CmdletBinding()]
@@ -23,7 +23,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$RepoRoot    = Split-Path -Parent $PSScriptRoot
+$RepoRoot    = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $DatasetRoot = Join-Path $RepoRoot 'data\Hackathon_Dataset_Redacted\Hackathon_Dataset_Redacted'
 $LogDir      = Join-Path $RepoRoot 'artifacts\logs'
 $LogFile     = Join-Path $LogDir 'locateanything_detached.log'

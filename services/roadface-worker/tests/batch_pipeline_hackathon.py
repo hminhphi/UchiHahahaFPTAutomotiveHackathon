@@ -22,7 +22,14 @@ def main() -> None:
     pipeline = RoadfacePipeline(
         dataset_paths=dataset,
         output_root=output_root,
-        detector=YoloDetector(device="0", confidence_threshold=0.25),
+        detector=YoloDetector(
+            model_path=Path(
+                "artifacts/training/roadface/train_runs/"
+                "yolo26n_detached_v3/weights/best.pt"
+            ),
+            device="cuda:0",
+            confidence_threshold=0.25,
+        ),
         depth_model=None,
     )
 
