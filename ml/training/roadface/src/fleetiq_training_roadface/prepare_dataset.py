@@ -23,9 +23,10 @@ from fleetiq_training_roadface.experimental import (
 
 
 DEFAULT_SPLIT = {
-    "train": ["T01-Sample", "T02-Sample", "T03-Sample", "T04-Sample"],
-    "val": ["T05-Sample"],
-    "test": ["T06-Sample"],
+    "train": ["T01-Sample", "T02-Sample", "T03-Sample", "T04-Sample",
+              "T01d", "T02d", "T03d", "T04d", "T05d", "T06d", "T07d", "T08d"],
+    "val": ["T05-Sample", "T09d"],
+    "test": ["T06-Sample", "T10d"],
 }
 
 

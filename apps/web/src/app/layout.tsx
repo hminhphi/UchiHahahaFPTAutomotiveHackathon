@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
-
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import NavLink from "@/components/nav-link";
 import "./styles.css";
 
 export const metadata: Metadata = {
@@ -11,21 +12,21 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`dark ${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
         <div className="app-shell">
           <aside className="side-nav">
-            <Link className="brand" href="/">
+            <NavLink className="brand" href="/">
               <span className="brand-mark">FQ</span>
               <span><strong>FleetIQ</strong><small>Guardian</small></span>
-            </Link>
+            </NavLink>
             <nav aria-label="Primary navigation">
-              <Link href="/">Overview</Link>
-              <Link className="nav-active" href="/trips/T01-Sample">Trip review</Link>
-              <Link href="/">Drivers</Link>
-              <Link href="/">Vehicles</Link>
-              <Link href="/">Risk insights</Link>
-              <Link href="/">Reports</Link>
+              <NavLink href="/">Overview</NavLink>
+              <NavLink href="/trips/T01d">Trip review</NavLink>
+              <NavLink href="/drivers">Drivers</NavLink>
+              <NavLink href="/vehicles">Vehicles</NavLink>
+              <NavLink href="/risk-insights">Risk insights</NavLink>
+              <NavLink href="/reports">Reports</NavLink>
             </nav>
             <div className="nav-footer"><span className="status-dot" /> Demo control plane</div>
           </aside>

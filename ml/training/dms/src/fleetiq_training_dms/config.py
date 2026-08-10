@@ -9,7 +9,7 @@ class Config:
     # PATHS (Relative to Repository Root)
     # -------------------------------------------------------------------------
     REPO_ROOT = Path(__file__).resolve().parents[5]
-    DATA_ROOT = REPO_ROOT / "data" / "Practice_Dataset"
+    DATA_ROOT = REPO_ROOT / "data" / "Practice_Dataset" / "Practice_Dataset"
 
     FEATURE_DIR = REPO_ROOT / "artifacts" / "training" / "dms" / "extracted_features"
     OUTPUT_DIR = REPO_ROOT / "artifacts" / "models" / "dms"

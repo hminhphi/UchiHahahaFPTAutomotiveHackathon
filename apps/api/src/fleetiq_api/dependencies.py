@@ -13,7 +13,17 @@ from uuid import uuid4
 
 from redis.exceptions import RedisError
 
-from .schemas import AnalysisJob, AnalysisJobCreate, TrajectoryData, TripSummary
+from .operations import (
+    DeliveryOrderRecord,
+    DriverRecord,
+    EventMarker,
+    LiveMediaInput,
+    LiveTelemetryInput,
+    RoadVideoDescriptor,
+    TripDetail,
+    VehicleRecord,
+)
+from .schemas import AnalysisJob, AnalysisJobCreate, TrajectoryData, TrajectoryPoint, TripSummary
 from .ws.frame_protocol import CameraFrame
 
 
@@ -90,6 +100,44 @@ class LatestStateSubscription(Protocol):
 
 class LatestStateBroker(Protocol):
     async def subscribe(self, trip_id: str) -> LatestStateSubscription: ...
+
+    def publish_nowait(self, trip_id: str, state: Mapping[str, Any]) -> None: ...
+
+
+class OperationsRepository(Protocol):
+    async def upsert_vehicle(self, vehicle: VehicleRecord) -> None: ...
+
+    async def upsert_driver(self, driver: DriverRecord) -> None: ...
+
+    async def upsert_trip(self, trip: TripDetail) -> None: ...
+
+    async def upsert_order(self, order: DeliveryOrderRecord) -> None: ...
+
+    async def upsert_event(self, event: EventMarker) -> None: ...
+
+    async def list_vehicles(self) -> tuple[VehicleRecord, ...]: ...
+
+    async def list_drivers(self) -> tuple[DriverRecord, ...]: ...
+
+    async def get_vehicle(self, vehicle_id: str) -> VehicleRecord | None: ...
+
+    async def get_driver(self, driver_id: str) -> DriverRecord | None: ...
+
+    async def get_orders(self, trip_id: str) -> tuple[DeliveryOrderRecord, ...]: ...
+
+    async def list_trips(self) -> tuple[TripSummary, ...]: ...
+
+    async def get_trip(self, trip_id: str) -> TripDetail | None: ...
+
+    async def get_trajectory(self, trip_id: str) -> TrajectoryData: ...
+
+    async def get_road_video(self, trip_id: str) -> RoadVideoDescriptor | None: ...
+
+    async def get_events(self, trip_id: str) -> tuple[EventMarker, ...]: ...
+
+    async def upsert_live_telemetry(self, trip_id: str, telemetry: LiveTelemetryInput) -> None: ...
+
+    async def register_media(self, trip_id: str, media: LiveMediaInput, *, object_key: str) -> None: ...
 
 
 class IdempotencyConflictError(ValueError):
@@ -293,6 +341,95 @@ class InMemoryTripTrajectoryRepository:
             max_speed_kmh=0,
             max_lateral_accel_mps2=0,
         )
+
+
+@dataclass
+class InMemoryOperationsRepository:
+    """Test-mode operational store with the same durable repository surface."""
+
+    trips_by_id: dict[str, TripDetail] = field(default_factory=dict)
+    vehicles_by_id: dict[str, VehicleRecord] = field(default_factory=dict)
+    drivers_by_id: dict[str, DriverRecord] = field(default_factory=dict)
+    orders_by_id: dict[str, DeliveryOrderRecord] = field(default_factory=dict)
+    telemetry_by_trip: dict[str, dict[int, LiveTelemetryInput]] = field(default_factory=dict)
+    media_by_trip: dict[str, dict[tuple[str, int], tuple[LiveMediaInput, str]]] = field(default_factory=dict)
+    events_by_trip: dict[str, dict[str, EventMarker]] = field(default_factory=dict)
+
+    async def upsert_vehicle(self, vehicle: VehicleRecord) -> None:
+        self.vehicles_by_id[vehicle.vehicle_id] = vehicle
+
+    async def upsert_driver(self, driver: DriverRecord) -> None:
+        self.drivers_by_id[driver.driver_id] = driver
+
+    async def upsert_trip(self, trip: TripDetail) -> None:
+        self.trips_by_id[trip.trip_id] = trip
+
+    async def upsert_order(self, order: DeliveryOrderRecord) -> None:
+        self.orders_by_id[order.order_id] = order
+
+    async def upsert_event(self, event: EventMarker) -> None:
+        self.events_by_trip.setdefault(event.trip_id, {})[event.event_id] = event
+
+    async def list_vehicles(self) -> tuple[VehicleRecord, ...]:
+        return tuple(sorted(self.vehicles_by_id.values(), key=lambda item: item.vehicle_id))
+
+    async def list_drivers(self) -> tuple[DriverRecord, ...]:
+        return tuple(sorted(self.drivers_by_id.values(), key=lambda item: item.driver_id))
+
+    async def get_vehicle(self, vehicle_id: str) -> VehicleRecord | None:
+        return self.vehicles_by_id.get(vehicle_id)
+
+    async def get_driver(self, driver_id: str) -> DriverRecord | None:
+        return self.drivers_by_id.get(driver_id)
+
+    async def get_orders(self, trip_id: str) -> tuple[DeliveryOrderRecord, ...]:
+        return tuple(order for order in self.orders_by_id.values() if order.trip_id == trip_id)
+
+    async def list_trips(self) -> tuple[TripSummary, ...]:
+        return tuple(
+            TripSummary(trip_id=trip.trip_id, status="complete" if trip.status == "complete" else "available")
+            for trip in sorted(self.trips_by_id.values(), key=lambda item: item.trip_id)
+        )
+
+    async def get_trip(self, trip_id: str) -> TripDetail | None:
+        return self.trips_by_id.get(trip_id)
+
+    async def get_trajectory(self, trip_id: str) -> TrajectoryData:
+        samples = self.telemetry_by_trip.get(trip_id, {})
+        points = tuple(
+            TrajectoryPoint(
+                frame_index=sample.frame_index,
+                timestamp_s=sample.timestamp_s,
+                x_m=0,
+                y_m=0,
+                speed_kmh=sample.speed_kmh,
+                longitudinal_accel_mps2=sample.longitudinal_accel_mps2 or 0,
+                lateral_accel_mps2=sample.lateral_accel_mps2 or 0,
+            )
+            for sample in sorted(samples.values(), key=lambda item: item.frame_index)
+        )
+        return TrajectoryData(
+            trip_id=trip_id,
+            points=points,
+            distance_m=0,
+            max_speed_kmh=max((point.speed_kmh for point in points), default=0),
+            max_lateral_accel_mps2=max((abs(point.lateral_accel_mps2) for point in points), default=0),
+        )
+
+    async def get_road_video(self, trip_id: str) -> RoadVideoDescriptor | None:
+        for (view, _), (media, object_key) in self.media_by_trip.get(trip_id, {}).items():
+            if view == "road_left" and media.content_type == "video/mp4":
+                return RoadVideoDescriptor(trip_id=trip_id, asset_url=object_key, fps=10, duration_s=0)
+        return None
+
+    async def get_events(self, trip_id: str) -> tuple[EventMarker, ...]:
+        return tuple(sorted(self.events_by_trip.get(trip_id, {}).values(), key=lambda item: (item.frame_index, item.event_id)))
+
+    async def upsert_live_telemetry(self, trip_id: str, telemetry: LiveTelemetryInput) -> None:
+        self.telemetry_by_trip.setdefault(trip_id, {})[telemetry.frame_index] = telemetry
+
+    async def register_media(self, trip_id: str, media: LiveMediaInput, *, object_key: str) -> None:
+        self.media_by_trip.setdefault(trip_id, {})[(media.view, media.sequence)] = (media, object_key)
 
 
 @dataclass

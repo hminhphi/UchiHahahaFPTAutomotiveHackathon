@@ -18,6 +18,14 @@ android {
         val bridgeUrl = providers.gradleProperty("FLEETIQ_BRIDGE_URL")
             .orElse("http://10.0.2.2:8090")
         buildConfigField("String", "CARSKY_BRIDGE_URL", "\"${bridgeUrl.get()}\"")
+
+        val vehicleId = providers.gradleProperty("FLEETIQ_VEHICLE_ID")
+            .orElse("vehicle-1")
+        buildConfigField("String", "VEHICLE_ID", "\"${vehicleId.get()}\"")
+
+        val apiUrl = providers.gradleProperty("FLEETIQ_API_URL")
+            .orElse("http://10.0.2.2:8000")
+        buildConfigField("String", "FLEETIQ_API_URL", "\"${apiUrl.get()}\"")
     }
 
     buildFeatures {
@@ -51,4 +59,5 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }

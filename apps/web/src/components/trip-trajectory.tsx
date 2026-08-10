@@ -1,6 +1,7 @@
 "use client";
 
 import type { TrajectoryPoint, TripTrajectory } from "@/lib/contracts";
+import type { TripEvidence } from "@/lib/trip-evidence";
 
 const PLOT_WIDTH = 760;
 const PLOT_HEIGHT = 332;
@@ -9,9 +10,11 @@ const PLOT_PADDING = 28;
 export function TripTrajectory({
   trajectory,
   currentFrameIndex = null,
+  events = [],
 }: {
   trajectory: TripTrajectory | null;
   currentFrameIndex?: number | null;
+  events?: TripEvidence[];
 }) {
   if (!trajectory || trajectory.points.length < 2) {
     return (
@@ -24,7 +27,8 @@ export function TripTrajectory({
   }
 
   const projection = createProjection(trajectory.points);
-  const eventPoints = selectEventPoints(trajectory.points);
+  const domain = speedDomain(trajectory.points);
+  const midpoint = (domain.min + domain.max) / 2;
   const start = trajectory.points[0];
   const end = trajectory.points[trajectory.points.length - 1];
   const currentPoint = currentFrameIndex === null ? null : findTrajectoryPoint(trajectory.points, currentFrameIndex);
@@ -39,35 +43,34 @@ export function TripTrajectory({
         <span className="trajectory-distance">{formatDistance(trajectory.distanceM)} route</span>
       </div>
       <div className="trajectory-layout">
-        <div className="trajectory-plot" aria-label="Trip trajectory coloured from blue at 0 km/h to red at 100 km/h">
+        <div className="trajectory-plot" aria-label={`Trip trajectory coloured from blue at ${formatScaleSpeed(domain.min)} to red at ${formatScaleSpeed(domain.max)} km/h`}>
           <svg viewBox={`0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`} role="img" aria-labelledby="trajectory-title trajectory-description">
-            <title id="trajectory-title">Trip route with speed and handling event markers</title>
-            <desc id="trajectory-description">Each route segment uses recorded world position. Blue means slower speed and red means 100 kilometres per hour or above.</desc>
+            <title id="trajectory-title">Trip route coloured by speed</title>
+            <desc id="trajectory-description">Each route segment uses recorded world position. Colour is scaled from five kilometres per hour below this trip&apos;s minimum to five above its maximum.</desc>
             <rect className="trajectory-background" x="0" y="0" width={PLOT_WIDTH} height={PLOT_HEIGHT} rx="12" />
             <path className="trajectory-grid" d={`M ${PLOT_PADDING} 92 H ${PLOT_WIDTH - PLOT_PADDING} M ${PLOT_PADDING} 166 H ${PLOT_WIDTH - PLOT_PADDING} M ${PLOT_PADDING} 240 H ${PLOT_WIDTH - PLOT_PADDING}`} />
             {trajectory.points.slice(1).map((point, index) => {
               const previous = trajectory.points[index];
               const from = projection(previous);
               const to = projection(point);
-              return <line className="trajectory-segment" key={point.frameIndex} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={speedColor(point.speedKmh)} />;
+              return <line className="trajectory-segment" key={point.frameIndex} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={speedColor(point.speedKmh, domain)} />;
             })}
             <circle className="trajectory-start" cx={projection(start).x} cy={projection(start).y} r="6" />
             <circle className="trajectory-end" cx={projection(end).x} cy={projection(end).y} r="6" />
-            {currentPoint ? <CurrentVehicle point={currentPoint} projection={projection} /> : null}
-            {eventPoints.map((point) => {
-              const position = projection(point);
-              const marker = eventMarker(point);
+            {events.map((event) => {
+              const eventPoint = findTrajectoryPoint(trajectory.points, event.frameIndex);
+              const position = projection(eventPoint);
               return (
-                <g className={`trajectory-event ${marker.className}`} key={point.frameIndex}>
-                  <title>{`${marker.label} at ${point.timestampS.toFixed(1)}s: ${point.speedKmh.toFixed(0)} km/h, longitudinal ${point.longitudinalAccelMps2.toFixed(1)} m/s2, lateral ${point.lateralAccelMps2.toFixed(1)} m/s2`}</title>
-                  <circle cx={position.x} cy={position.y} r="7" />
-                  <text x={position.x} y={position.y + 3} textAnchor="middle">{marker.symbol}</text>
+                <g key={`${event.label}-${event.frameIndex}`} className={`trajectory-event severity-${event.severity}`} aria-label={`Risk event: ${event.label} at frame ${event.frameIndex}`} transform={`translate(${position.x} ${position.y})`}>
+                  <circle r="8" />
+                  <path d="M -3 -3 L 3 3 M 3 -3 L -3 3" />
                 </g>
               );
             })}
+            {currentPoint ? <CurrentVehicle point={currentPoint} projection={projection} /> : null}
           </svg>
           <div className="trajectory-legend" aria-label="Speed legend">
-            <span>0</span><i /><span>50</span><span>100+ km/h</span>
+            <span>{formatScaleSpeed(domain.min)}</span><i /><span>{formatScaleSpeed(midpoint)}</span><span>{formatScaleSpeed(domain.max)} km/h</span>
           </div>
         </div>
         <div className="trajectory-summary">
@@ -77,7 +80,6 @@ export function TripTrajectory({
           <Metric label="Peak lateral accel" value={`${trajectory.maxLateralAccelMps2.toFixed(1)} m/s2`} />
           <div className="route-key"><span className="route-key-start" />Start</div>
           <div className="route-key"><span className="route-key-end" />End</div>
-          <div className="route-key"><span className="route-key-event">!</span>Harsh brake / fast corner</div>
           <p>Geometry uses recorded vehicle position. Acceleration marks handling context without accumulated integration drift.</p>
         </div>
       </div>
@@ -123,19 +125,8 @@ function createProjection(points: TrajectoryPoint[]) {
   const offsetY = PLOT_PADDING + (innerHeight - rangeY * scale) / 2;
   return (point: TrajectoryPoint) => ({
     x: offsetX + (point.xM - minX) * scale,
-    y: PLOT_HEIGHT - offsetY - (point.yM - minY) * scale,
+    y: offsetY + (point.yM - minY) * scale,
   });
-}
-
-function selectEventPoints(points: TrajectoryPoint[]) {
-  const selected: TrajectoryPoint[] = [];
-  let lastTimestamp = -Infinity;
-  for (const point of points) {
-    if (point.events.length === 0 || point.timestampS - lastTimestamp < 1) continue;
-    selected.push(point);
-    lastTimestamp = point.timestampS;
-  }
-  return selected;
 }
 
 export function findTrajectoryPoint(points: TrajectoryPoint[], frameIndex: number) {
@@ -147,15 +138,18 @@ export function findTrajectoryPoint(points: TrajectoryPoint[], frameIndex: numbe
   return nearest;
 }
 
-function speedColor(speedKmh: number) {
-  const progress = Math.max(0, Math.min(speedKmh, 100)) / 100;
+export function speedDomain(points: readonly Pick<TrajectoryPoint, "speedKmh">[]) {
+  const speeds = points.map((point) => point.speedKmh);
+  return { min: Math.min(...speeds) - 5, max: Math.max(...speeds) + 5 };
+}
+
+function speedColor(speedKmh: number, domain: { min: number; max: number }) {
+  const progress = Math.max(0, Math.min(1, (speedKmh - domain.min) / (domain.max - domain.min)));
   return `hsl(${220 - progress * 220} 82% 49%)`;
 }
 
-function eventMarker(point: TrajectoryPoint) {
-  if (point.events.includes("harsh_brake")) return { label: "Harsh brake", symbol: "!", className: "brake" };
-  if (point.events.includes("fast_corner")) return { label: "Fast corner", symbol: "C", className: "corner" };
-  return { label: "Speeding", symbol: "+", className: "speeding" };
+function formatScaleSpeed(speedKmh: number) {
+  return speedKmh.toFixed(0);
 }
 
 function formatDistance(distanceM: number) {

@@ -66,19 +66,24 @@ class CoachingViewModel : ViewModel() {
     private val mutableState = MutableStateFlow<CoachingState>(CoachingState.Empty)
     val state: StateFlow<CoachingState> = mutableState.asStateFlow()
 
+    private var consecutiveFailures = 0
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             while (isActive) {
-                val result = runCatching { client.current("vehicle-1") }
+                val interval = pollInterval(consecutiveFailures)
+                val result = runCatching { client.current(VEHICLE_ID) }
                 mutableState.value = result.fold(
                     onSuccess = { command ->
+                        consecutiveFailures = 0
                         connectionState(mutableState.value, connected = true, command)
                     },
                     onFailure = {
+                        consecutiveFailures++
                         connectionState(mutableState.value, connected = false, command = null)
                     },
                 )
-                delay(POLL_INTERVAL_MS)
+                delay(interval)
             }
         }
     }
@@ -93,7 +98,12 @@ class CoachingViewModel : ViewModel() {
     }
 
     companion object {
+        val VEHICLE_ID: String get() = BuildConfig.VEHICLE_ID
         private const val POLL_INTERVAL_MS = 1_000L
+        private const val MAX_INTERVAL_MS = 8_000L
+
+        fun pollInterval(failures: Int): Long =
+            minOf(POLL_INTERVAL_MS * (1L shl minOf(failures, 3)), MAX_INTERVAL_MS)
 
         fun reduce(previous: CoachingState, command: CoachingCommand): CoachingState {
             require(command.severity in 1..5) { "severity must be between 1 and 5" }

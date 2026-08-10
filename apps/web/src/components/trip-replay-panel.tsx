@@ -1,44 +1,66 @@
 "use client";
 
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
+import { RoadLeftVideo } from "@/components/road-left-video";
 import { TripTrajectory, findTrajectoryPoint } from "@/components/trip-trajectory";
-import { TripVideoPlayer } from "@/components/trip-video-player";
+import { SynchronizedFollowers } from "@/components/synchronized-followers";
 import type { TripTrajectory as TripTrajectoryData } from "@/lib/contracts";
+import { fetchFrameAnalysis, type DmsFrameAnalysis, type FusionFrameAnalysis, type RoadFrameAnalysis, type RoadVideoDescriptor } from "@/lib/operations";
 import type { TripEvidence } from "@/lib/trip-evidence";
 
-export function TripReplayPanel({ tripId, trajectory, evidence }: { tripId: string; trajectory: TripTrajectoryData | null; evidence: TripEvidence[] }) {
-  const frameIndexes = trajectory?.points.map((point) => point.frameIndex) ?? [];
-  const [currentFrameIndex, setCurrentFrameIndex] = useState<number | null>(frameIndexes[0] ?? null);
+export function TripReplayPanel({ tripId, trajectory, evidence, roadVideo, currentFrameIndex, onFrameIndexChange }: { tripId: string; trajectory: TripTrajectoryData | null; evidence: TripEvidence[]; roadVideo: RoadVideoDescriptor | null; currentFrameIndex: number | null; onFrameIndexChange: (frameIndex: number) => void }) {
   const point = currentFrameIndex === null || !trajectory ? null : findTrajectoryPoint(trajectory.points, currentFrameIndex);
+  const [roadAnalysis, setRoadAnalysis] = useState<RoadFrameAnalysis | null>(null);
+  const [dmsAnalysis, setDmsAnalysis] = useState<DmsFrameAnalysis | null>(null);
+  const [fusionAnalysis, setFusionAnalysis] = useState<FusionFrameAnalysis | null>(null);
+
+  useEffect(() => {
+    if (currentFrameIndex === null) return;
+    const controller = new AbortController();
+    Promise.all([
+      fetchFrameAnalysis<RoadFrameAnalysis>(tripId, "road", currentFrameIndex, controller.signal),
+      fetchFrameAnalysis<DmsFrameAnalysis>(tripId, "dms", currentFrameIndex, controller.signal),
+      fetchFrameAnalysis<FusionFrameAnalysis>(tripId, "fusion", currentFrameIndex, controller.signal),
+    ]).then(([road, dms, fusion]) => {
+      setRoadAnalysis(road);
+      setDmsAnalysis(dms);
+      setFusionAnalysis(fusion);
+    }).catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setRoadAnalysis(null);
+      setDmsAnalysis(null);
+      setFusionAnalysis(null);
+    });
+    return () => controller.abort();
+  }, [currentFrameIndex, tripId]);
 
   return (
     <>
       <section className="evidence-grid">
         <article className="video-panel panel">
           <div className="panel-heading">
-            <div><span className="eyebrow">Contextual video evidence</span><h2>Camera replay</h2></div>
+            <div><span className="eyebrow">Contextual video evidence</span><h2>Road-facing replay</h2></div>
             <span className="replay-chip">Frame-synchronised</span>
           </div>
-          <TripVideoPlayer tripId={tripId} frameIndexes={frameIndexes} selectedFrameIndex={currentFrameIndex} driverState={point?.driverState ?? null} phoneUse={point?.phoneUse ?? null} evidence={evidence} onFrameIndexChange={setCurrentFrameIndex} />
+          {roadVideo ? (
+            <RoadLeftVideo descriptor={roadVideo} selectedFrameIndex={currentFrameIndex} onFrameIndexChange={onFrameIndexChange} analysis={roadAnalysis} />
+          ) : (
+            <div className="camera-placeholder road-video-unavailable"><strong>Road-left video unavailable</strong><span>Run the media packaging step for this trip.</span></div>
+          )}
         </article>
+        <SynchronizedFollowers tripId={tripId} frameIndex={currentFrameIndex} dmsAnalysis={dmsAnalysis} />
         <aside className="signal-stack" aria-label="Frame synchronised telemetry">
           <ReplaySignal label="Replay time" value={point ? formatTime(point.timestampS) : "Waiting"} detail={point ? `Frame ${point.frameIndex}` : "Waiting for camera frame"} tone="blue" />
           <ReplaySignal label="Current speed" value={point ? `${point.speedKmh.toFixed(0)} km/h` : "-- km/h"} detail="Organizer ego telemetry" tone="blue" />
           <ReplaySignal label="Longitudinal accel" value={point ? `${point.longitudinalAccelMps2.toFixed(2)} m/s2` : "-- m/s2"} detail={handlingDetail(point, "longitudinal")} tone="warning" />
           <ReplaySignal label="Lateral accel" value={point ? `${point.lateralAccelMps2.toFixed(2)} m/s2` : "-- m/s2"} detail={handlingDetail(point, "lateral")} tone="warning" />
-          <ReplaySignal label="TTC / headway" value={ttcValue(point)} detail={ttcDetail(point)} tone="warning" />
-          <ReplaySignal label="Driver state" value={point?.driverState ?? "unknown"} detail={driverDetail(point)} tone="blue" />
-          <ReplaySignal
-            label="Phone use"
-            value={point?.phoneUse === true ? "Detected" : point?.phoneUse === false ? "Not detected" : "Unavailable"}
-            detail={point?.phoneUse === true ? "Stable 3-of-5 frame detection" : "Independent DMS signal"}
-            tone={point?.phoneUse === true ? "warning" : "blue"}
-          />
+          <ReplaySignal label="FleetIQ risk" value={fusionAnalysis ? `${fusionAnalysis.risk_index.toFixed(0)}/100` : "N/A"} detail={fusionAnalysis ? `Safety ${fusionAnalysis.safety_score}/100 · ${fusionAnalysis.producer}` : "Precomputed fusion unavailable"} tone="warning" />
+          <ReplaySignal label="Object TTC" value={ttcValue(roadAnalysis)} detail={ttcDetail(roadAnalysis)} tone="warning" />
+          <ReplaySignal label="Driver state" value={dmsAnalysis?.driver_state?.state ?? "unknown"} detail={driverDetail(dmsAnalysis)} tone="blue" />
         </aside>
       </section>
       <section className="bottom-grid">
-        <TripTrajectory trajectory={trajectory} currentFrameIndex={currentFrameIndex} />
+        <TripTrajectory trajectory={trajectory} currentFrameIndex={currentFrameIndex} events={evidence} />
         <article className="panel coaching-panel">
           <span className="eyebrow">Driver coaching plan</span>
           <h2>{coachingHeadline(point)}</h2>
@@ -67,22 +89,20 @@ function handlingDetail(point: TripTrajectoryData["points"][number] | null, axis
   return axis === "longitudinal" ? "Forward and braking dynamics" : "Cornering dynamics";
 }
 
-function ttcValue(point: TripTrajectoryData["points"][number] | null) {
-  if (!point) return "--";
-  if (point.minTtcS !== null) return `${point.minTtcS.toFixed(1)} s`;
-  if (point.headwayS !== null) return `${point.headwayS.toFixed(1)} s headway`;
-  return "No valid TTC";
+function ttcValue(analysis: RoadFrameAnalysis | null) {
+  const values = analysis?.detections.flatMap((item) => item.ttc_s === null || item.lane_relation !== "in_lane" ? [] : [item.ttc_s]) ?? [];
+  return values.length ? `${Math.min(...values).toFixed(1)} s` : "N/A";
 }
 
-function ttcDetail(point: TripTrajectoryData["points"][number] | null) {
-  if (!point) return "Waiting for camera frame";
-  if (point.activeEventTypes.length) return point.activeEventTypes.join(", ");
-  return "No target in simulator collision cone";
+function ttcDetail(analysis: RoadFrameAnalysis | null) {
+  if (!analysis) return "FleetIQ road artifact unavailable";
+  return `${analysis.detections.length} tracked object(s) · ${analysis.producer}`;
 }
 
-function driverDetail(point: TripTrajectoryData["points"][number] | null) {
-  if (!point || point.driverAlertness === null) return "DMS telemetry unavailable";
-  return `Alertness ${(point.driverAlertness * 100).toFixed(0)}% / simulator risk ${(point.simulatorRiskScore ?? 0).toFixed(0)}`;
+function driverDetail(analysis: DmsFrameAnalysis | null) {
+  const state = analysis?.driver_state;
+  if (!state) return "DMS artifact unavailable";
+  return `${analysis.producer} · confidence ${(state.confidence * 100).toFixed(0)}%`;
 }
 
 function coachingHeadline(point: TripTrajectoryData["points"][number] | null) {
@@ -94,6 +114,5 @@ function coachingHeadline(point: TripTrajectoryData["points"][number] | null) {
 
 function coachingDetail(point: TripTrajectoryData["points"][number] | null) {
   if (!point) return "Replay the trip to inspect frame-synchronised road video, route position, driver state, and vehicle telemetry.";
-  if (point.events.length || point.activeEventTypes.length) return `Frame ${point.frameIndex} carries ${[...point.events, ...point.activeEventTypes].join(", ")}. Keep this evidence window linked to the coaching record.`;
-  return `At ${formatTime(point.timestampS)}, the vehicle is travelling at ${point.speedKmh.toFixed(0)} km/h with driver state ${point.driverState}.`;
+  return `At ${formatTime(point.timestampS)}, the vehicle is travelling at ${point.speedKmh.toFixed(0)} km/h. Review this synchronized evidence before assigning coaching.`;
 }

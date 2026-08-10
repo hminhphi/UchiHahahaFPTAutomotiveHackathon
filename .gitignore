@@ -91,3 +91,8 @@ extracted_text/
 *.jar
 Template for Teams - Hackathon 2026.pptx
 Automotive Hackathon Webinar 25.06 (1).pdf
+
+# Release packages
+release/
+release-lite/
+*.zip

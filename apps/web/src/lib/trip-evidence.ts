@@ -1,4 +1,5 @@
 import type { TrajectoryPoint, TripTrajectory } from "./contracts";
+import type { FusionTripSummary } from "./operations";
 
 export interface TripEvidence {
   detail: string;
@@ -6,7 +7,6 @@ export interface TripEvidence {
   label: string;
   severity: 1 | 2 | 3 | 4 | 5;
   time: string;
-  view: "road_left" | "driver";
 }
 
 export interface TripScoreSignal {
@@ -28,33 +28,30 @@ export function buildTripEvidence(trajectory: TripTrajectory | null): TripEviden
     .slice(0, 3);
 }
 
-export function buildTripScoreSignals(trajectory: TripTrajectory | null): TripScoreSignal[] {
-  const points = trajectory?.points ?? [];
-  const riskSamples = points.flatMap((point) => point.simulatorRiskScore === null ? [] : [point.simulatorRiskScore]);
-  const alertnessSamples = points.flatMap((point) => point.driverAlertness === null ? [] : [point.driverAlertness]);
-  const handlingEvents = points.filter((point) => point.events.includes("harsh_brake") || point.events.includes("fast_corner")).length;
-  const speedingFrames = points.filter((point) => point.events.includes("speeding")).length;
-
+export function buildTripScoreSignals(summary: FusionTripSummary | null): TripScoreSignal[] {
+  const scores = summary?.componentSafetyScores;
   return [
     {
-      label: "Road risk exposure",
-      value: riskSamples.length ? clamp(100 - average(riskSamples)) : null,
-      note: "Organizer simulator risk telemetry",
+      label: "Collision margin",
+      value: roundScore(scores?.road),
+      note: "FleetIQ roadface-worker / stereo TTC",
     },
     {
       label: "Driver attention",
-      value: alertnessSamples.length ? clamp(average(alertnessSamples) * 100) : null,
-      note: "Average in-cabin alertness",
+      value: roundScore(scores?.dms),
+      note: scores?.dms == null
+        ? "DMS unavailable until a verified checkpoint is supplied"
+        : "FleetIQ dms-worker / verified sequence checkpoint",
     },
     {
       label: "Vehicle handling",
-      value: points.length ? clamp(100 - (handlingEvents / points.length) * 500) : null,
-      note: "Harsh-brake and fast-corner frame rate",
+      value: roundScore(scores?.telemetry),
+      note: "FleetIQ fusion of speed and longitudinal/lateral acceleration",
     },
     {
-      label: "Speed compliance",
-      value: points.length ? clamp(100 - (speedingFrames / points.length) * 500) : null,
-      note: "Telemetry speeding frame rate",
+      label: "Lane discipline",
+      value: roundScore(scores?.lane),
+      note: "FleetIQ lane association and offset",
     },
   ];
 }
@@ -69,7 +66,6 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: point.minTtcS < 1.5 ? "TTC entered critical range" : "Short TTC detected",
       detail: `TTC ${point.minTtcS.toFixed(1)} s from organizer telemetry`,
       severity: point.minTtcS < 1.5 ? 5 : 4,
-      view: "road_left",
     });
   }
   if (point.events.includes("harsh_brake")) {
@@ -79,7 +75,6 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: "Harsh braking detected",
       detail: `Longitudinal acceleration ${point.longitudinalAccelMps2.toFixed(1)} m/s2`,
       severity: 4,
-      view: "road_left",
     });
   }
   if (point.events.includes("fast_corner")) {
@@ -89,7 +84,6 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: "Fast corner detected",
       detail: `Lateral acceleration ${Math.abs(point.lateralAccelMps2).toFixed(1)} m/s2`,
       severity: 3,
-      view: "road_left",
     });
   }
   if (point.events.includes("speeding")) {
@@ -99,7 +93,6 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: "Speeding telemetry flag",
       detail: `Vehicle speed ${point.speedKmh.toFixed(0)} km/h`,
       severity: 3,
-      view: "road_left",
     });
   }
   if (point.driverState === "drowsy" || point.driverState === "distracted") {
@@ -111,17 +104,6 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
         ? "Driver-state telemetry"
         : `Alertness ${Math.round(point.driverAlertness * 100)}%`,
       severity: point.driverState === "drowsy" ? 4 : 3,
-      view: "driver",
-    });
-  }
-  if (point.phoneUse === true) {
-    evidence.push({
-      frameIndex: point.frameIndex,
-      time,
-      label: "Phone use detected",
-      detail: "Stable in-cabin phone detection",
-      severity: 3,
-      view: "driver",
     });
   }
   if (point.simulatorRiskScore !== null && point.simulatorRiskScore >= 80) {
@@ -131,18 +113,13 @@ function evidenceForPoint(point: TrajectoryPoint): TripEvidence[] {
       label: "High simulator risk score",
       detail: `Reference risk score ${Math.round(point.simulatorRiskScore)}/100`,
       severity: 4,
-      view: "road_left",
     });
   }
   return evidence;
 }
 
-function average(values: number[]): number {
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function clamp(value: number): number {
-  return Math.round(Math.max(0, Math.min(100, value)));
+function roundScore(value: number | null | undefined): number | null {
+  return value == null ? null : Math.round(Math.max(0, Math.min(100, value)));
 }
 
 function formatTime(timestampS: number): string {

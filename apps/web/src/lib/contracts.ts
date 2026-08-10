@@ -1,5 +1,5 @@
 export type DriverState = "attentive" | "distracted" | "drowsy" | "unknown";
-export type ModelStatus = "live" | "mock" | "degraded" | "reference";
+export type ModelStatus = "live" | "precomputed" | "mock" | "degraded" | "reference";
 
 export interface FleetTrip {
   tripId: string;
@@ -39,7 +39,6 @@ export interface TrajectoryPoint {
   minTtcS: number | null;
   headwayS: number | null;
   driverState: string;
-  phoneUse: boolean | null;
   driverAlertness: number | null;
   simulatorRiskScore: number | null;
   activeEventTypes: string[];

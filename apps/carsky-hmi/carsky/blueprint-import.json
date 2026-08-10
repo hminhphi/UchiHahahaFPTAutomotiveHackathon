@@ -1,0 +1,188 @@
+{
+  "data": {
+    "version": 1,
+    "exportedAt": "2026-08-10T00:00:00.000Z",
+    "blueprint": {
+      "name": "fleetiq-guardian",
+      "description": "FleetIQ Guardian: coaching-bridge → KUKSA Broker + IVI Gateway → IVI Android (Skycraft)",
+      "nodes": [
+        {
+          "id": "node-kuksa",
+          "label": "Central Broker (VSS)",
+          "nodeType": "kuksa-databroker",
+          "config": { "kuksa": {}, "prefix": "central-broker" },
+          "positionX": 600,
+          "positionY": 0,
+          "pins": [
+            {
+              "id": "pin-kuksa-in",
+              "name": "kuksa",
+              "pinType": "KUKSA",
+              "direction": "INPUT",
+              "side": null
+            }
+          ]
+        },
+        {
+          "id": "node-ivi-switch",
+          "label": "IVI Switch",
+          "nodeType": "eth-bridge",
+          "config": null,
+          "positionX": 1100,
+          "positionY": 200,
+          "pins": [
+            {
+              "id": "pin-iviswitch-eth",
+              "name": "eth",
+              "pinType": "GENERIC",
+              "direction": "INPUT",
+              "side": null
+            }
+          ]
+        },
+        {
+          "id": "node-bridge",
+          "label": "coaching-bridge",
+          "nodeType": "container",
+          "config": {
+            "image": "registry.hackathon-1.carsky.io/fleetiq/carsky-coaching-bridge:0.1.0",
+            "command": "python /app/bridge.py",
+            "prefix": "coaching-bridge",
+            "env": {
+              "BRIDGE_HOST": "0.0.0.0",
+              "BRIDGE_PORT": "8090",
+              "LOG_LEVEL": "INFO"
+            },
+            "kuksaIntercepts": {
+              "kuksa": "127.0.0.10:55555"
+            },
+            "exposedPorts": [
+              { "name": "api", "port": 8090, "protocol": "http" }
+            ]
+          },
+          "positionX": 200,
+          "positionY": 0,
+          "pins": [
+            {
+              "id": "pin-bridge-kuksa",
+              "name": "kuksa",
+              "pinType": "KUKSA",
+              "direction": "OUTPUT",
+              "side": null
+            },
+            {
+              "id": "pin-bridge-eth",
+              "name": "eth",
+              "pinType": "GENERIC",
+              "direction": "OUTPUT",
+              "side": null
+            }
+          ]
+        },
+        {
+          "id": "node-ivi-gw",
+          "label": "IVI Gateway",
+          "nodeType": "script-node",
+          "config": {
+            "script": "inline",
+            "scriptContent": "-- ivi_gateway.lua\n-- Bridges Vehicle KUKSA VSS signals to IVI Android VHAL.\n-- coaching-bridge publishes coaching commands to KUKSA;\n-- this gateway forwards them to VHAL properties on the Android guest.\n\nlocal kuksa = pins.kuksa\nassert(kuksa and kuksa.vss, \"pins.kuksa.vss missing\")\n\nlocal Vehicle = kuksa.vss.Vehicle\n\n-- Forward Vehicle.Speed to VHAL PERF_VEHICLE_SPEED (0x11600207)\nif Vehicle and Vehicle.Speed then\n  Vehicle.Speed:on_change(function(v)\n    if pins.vhal then\n      pins.vhal:set(0x11600207, 0, v or 0)\n    end\n  end)\nend\n\nlog(\"ivi_gateway ready\")\n"
+          },
+          "positionX": 850,
+          "positionY": -100,
+          "pins": [
+            {
+              "id": "pin-ivigw-kuksa",
+              "name": "kuksa",
+              "pinType": "KUKSA",
+              "direction": "OUTPUT",
+              "side": null
+            },
+            {
+              "id": "pin-ivigw-vhal",
+              "name": "vhal",
+              "pinType": "VHAL",
+              "direction": "INPUT",
+              "side": null
+            },
+            {
+              "id": "pin-ivigw-eth",
+              "name": "eth",
+              "pinType": "GENERIC",
+              "direction": "OUTPUT",
+              "side": null
+            }
+          ]
+        },
+        {
+          "id": "node-ivi",
+          "label": "IVI - Android",
+          "nodeType": "skycraft",
+          "config": {
+            "image": {
+              "arch": "aarch64",
+              "version": "0.0.1",
+              "versionId": "6KAlP82Ez-ELrv2LB224v",
+              "artifactId": "zAC90TkKqaA63rfuATj1m"
+            },
+            "prefix": "face",
+            "gpuBackend": "virglrenderer",
+            "displayHeight": 1080
+          },
+          "positionX": 1400,
+          "positionY": 200,
+          "pins": [
+            {
+              "id": "pin-ivi-vhal",
+              "name": "vhal",
+              "pinType": "VHAL",
+              "direction": "OUTPUT",
+              "side": null
+            },
+            {
+              "id": "pin-ivi-eth",
+              "name": "eth",
+              "pinType": "GENERIC",
+              "direction": "OUTPUT",
+              "side": null,
+              "properties": { "address": "10.99.0.14" }
+            },
+            {
+              "id": "pin-ivi-usb",
+              "name": "GENERIC",
+              "pinType": "GENERIC",
+              "direction": "OUTPUT",
+              "side": null
+            }
+          ]
+        },
+        {
+          "id": "node-devproxy",
+          "label": "Device Proxy",
+          "nodeType": "device-proxy",
+          "config": { "prefix": "device-proxy" },
+          "positionX": 1700,
+          "positionY": 200,
+          "pins": [
+            {
+              "id": "pin-devproxy-usb",
+              "name": "GENERIC",
+              "pinType": "GENERIC",
+              "direction": "INPUT",
+              "side": null
+            }
+          ]
+        }
+      ],
+      "edges": [
+        { "sourcePinId": "pin-bridge-kuksa",  "targetPinId": "pin-kuksa-in" },
+        { "sourcePinId": "pin-bridge-eth",    "targetPinId": "pin-iviswitch-eth" },
+        { "sourcePinId": "pin-ivigw-kuksa",   "targetPinId": "pin-kuksa-in" },
+        { "sourcePinId": "pin-ivi-vhal",      "targetPinId": "pin-ivigw-vhal" },
+        { "sourcePinId": "pin-ivigw-eth",     "targetPinId": "pin-iviswitch-eth" },
+        { "sourcePinId": "pin-ivi-eth",       "targetPinId": "pin-iviswitch-eth" },
+        { "sourcePinId": "pin-ivi-usb",       "targetPinId": "pin-devproxy-usb" }
+      ]
+    }
+  }
+}
+

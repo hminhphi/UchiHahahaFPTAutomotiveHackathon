@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0",
+  "name": "fleetiq-guardian-simple",
+  "description": "FleetIQ Guardian - Simplified blueprint without VSS (HTTP-only coaching bridge)",
+  "artifacts": {
+    "androidImage": "aaos"
+  },
+  "nodes": [
+    {
+      "key": "coaching-bridge",
+      "type": "CONTAINER",
+      "config": {
+        "image": "registry.hackathon-1.carsky.io/fleetiq/carsky-coaching-bridge:0.1.0",
+        "command": ["python", "/app/bridge.py"],
+        "env": {
+          "MODE": "http-only",
+          "FLEET_BACKEND_URL": "https://your-fleet-api.example.com"
+        },
+        "exposedPorts": [
+          {"name": "api", "port": 8090, "protocol": "http"}
+        ]
+      },
+      "pins": [
+        {"key": "ethernet", "type": "ETHERNET", "direction": "BIDIRECTIONAL"}
+      ]
+    },
+    {
+      "key": "fleetiq-aaos",
+      "type": "SKYCRAFT",
+      "config": {
+        "os": "android",
+        "artifact": "aaos",
+        "version": "0.0.1",
+        "architecture": "aarch64",
+        "displayWidth": 1920,
+        "displayHeight": 1080,
+        "displayDpi": 160
+      },
+      "pins": [
+        {"key": "ethernet", "type": "ETHERNET", "direction": "BIDIRECTIONAL"},
+        {"key": "screen", "type": "VIDEO", "direction": "OUTPUT"}
+      ]
+    },
+    {
+      "key": "room-network",
+      "type": "ETHERNET_BRIDGE",
+      "pins": [
+        {"key": "bridge", "type": "ETHERNET", "direction": "BIDIRECTIONAL"}
+      ]
+    }
+  ],
+  "edges": [
+    {"from": "coaching-bridge.ethernet", "to": "room-network.bridge"},
+    {"from": "fleetiq-aaos.ethernet", "to": "room-network.bridge"}
+  ],
+  "widgets": [
+    {
+      "key": "hmi-screen",
+      "type": "SCREEN",
+      "source": "fleetiq-aaos.screen",
+      "title": "FleetIQ Guardian HMI"
+    }
+  ]
+}

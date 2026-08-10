@@ -4,6 +4,7 @@ import type { FleetTrip } from "@/lib/contracts";
 
 const statusCopy = {
   live: "Models live",
+  precomputed: "FleetIQ precomputed",
   mock: "Fixture data",
   degraded: "Model degraded",
   reference: "Organizer telemetry",

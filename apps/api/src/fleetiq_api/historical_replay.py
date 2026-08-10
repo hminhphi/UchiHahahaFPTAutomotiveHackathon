@@ -110,7 +110,7 @@ class S3TripMediaStore:
             sorted(
                 prefix.text.strip("/").split("/")[-1]
                 for prefix in root.findall(".//{*}CommonPrefixes/{*}Prefix")
-                if prefix.text
+                if prefix.text and not prefix.text.strip("/").endswith("-Sample")
             )
         )
 
@@ -211,8 +211,16 @@ class HistoricalTripRepository:
 
     async def list_trips(self) -> tuple[TripSummary, ...]:
         trip_ids = await self._media.list_trip_ids()
-        documents = await asyncio.gather(*(self._media.read_trip_document(trip_id) for trip_id in trip_ids))
-        return tuple(build_trip_summary(trip_id, document) for trip_id, document in zip(trip_ids, documents, strict=True))
+        results = await asyncio.gather(
+            *(self._media.read_trip_document(trip_id) for trip_id in trip_ids),
+            return_exceptions=True,
+        )
+        summaries: list[TripSummary] = []
+        for trip_id, result in zip(trip_ids, results):
+            if isinstance(result, BaseException):
+                continue
+            summaries.append(build_trip_summary(trip_id, result))
+        return tuple(summaries)
 
     async def get_trajectory(self, trip_id: str) -> TrajectoryData:
         return build_trajectory(trip_id, await self._media.read_trip_document(trip_id))
