@@ -5,7 +5,7 @@ the source release candidate is committed and tagged. It creates a source
 archive plus local artifacts, predictions, and the private submission workspace.
 
 ```powershell
-./tools/release/create_release_package.ps1 -Version v1.1.3 -PrivateReviewerHandoff
+./tools/release/create_release_package.ps1 -Version v1.1.4 -PrivateReviewerHandoff
 ```
 
 Do not publish the runtime ZIP, organizer data, model weights, or generated trip

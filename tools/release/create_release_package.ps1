@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "v1.1.3",
+    [string]$Version = "v1.1.4",
     [switch]$PrivateReviewerHandoff,
     [switch]$IncludeDataset,
     [switch]$IncludeYolopMasks,
@@ -52,7 +52,7 @@ function Copy-RequiredPath {
     if (Test-Path -LiteralPath $source -PathType Container) {
         New-Item -ItemType Directory -Path $destination -Force | Out-Null
         $robocopyArgs = @($source, $destination, "/E", "/COPY:DAT", "/DCOPY:T", "/R:1", "/W:1", "/NFL", "/NDL", "/NJH", "/NJS", "/NP")
-        if ($RelativePath -eq "submission\UchiHahaha_FleetIQ_Guardian_Round2_Final") {
+        if ($RelativePath.Replace('/', '\') -eq "submission\UchiHahaha_FleetIQ_Guardian_Round2_Final") {
             $robocopyArgs += @("/XF", "FleetIQ_Guardian_Round2_Demo_caption.mp4")
         }
         & robocopy @robocopyArgs | Out-Null

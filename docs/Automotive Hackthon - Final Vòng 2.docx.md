@@ -18,7 +18,7 @@ Automotive Hackathon 2026
 | :---- | :---- |
 | **Đại diện / email Đội trưởng** | `[CẦN TEAM XÁC NHẬN TRƯỚC KHI UPLOAD]` |
 | **Tên solution** | FleetIQ Guardian: Remote Driver Intelligence and Collision Risk Platform |
-| **Mốc bản được báo cáo** | `v1.1.3`, 2026-08-11 |
+| **Mốc bản được báo cáo** | `v1.1.4`, 2026-08-11 |
 | **Final report** | `Automotive_Hackathon_Final_Report_R2.md` |
 | **Video demo dùng để chấm** | `FleetIQ_Guardian_Round2_Demo.mp4` `[URL REVIEWER-ACCESSIBLE CẦN ĐIỀN TRƯỚC KHI NỘP]` |
 | **Evidence Folder** | `[CẦN DÁN URL REVIEWER-ACCESSIBLE]` |
