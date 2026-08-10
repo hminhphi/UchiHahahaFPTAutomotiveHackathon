@@ -27,7 +27,7 @@ Verify package integrity before copying:
 Get-FileHash -Algorithm SHA256 <file>
 ```
 
-Compare the result to `MANIFEST.sha256` in the runtime archive.
+Compare key source, model, and submission files to `MANIFEST.sha256` in the runtime archive. The manifest also records the file count and byte count of the large artifact directories.
 
 ## Start The Dashboard
 
@@ -62,3 +62,9 @@ The default package excludes data. For an organizer-approved private transfer th
 ```
 
 Do not attach an `-IncludeDataset` archive to a public release without organizer permission.
+
+The optional YOLOP mask set is large and not required by the primary replay flow. Add it only when a reviewer needs every segmentation overlay:
+
+```powershell
+./create_release_package.ps1 -IncludeYolopMasks
+```

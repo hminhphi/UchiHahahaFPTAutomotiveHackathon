@@ -2,6 +2,7 @@
 param(
     [string]$Version = "v1.0.0",
     [switch]$IncludeDataset,
+    [switch]$IncludeYolopMasks,
     [switch]$Overwrite
 )
 
@@ -32,7 +33,16 @@ function Copy-RequiredPath {
     }
     $destination = Join-Path $stage (Join-Path "runtime" $RelativePath)
     New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
-    Copy-Item -LiteralPath $source -Destination $destination -Recurse -Force
+    if (Test-Path -LiteralPath $source -PathType Container) {
+        New-Item -ItemType Directory -Path $destination -Force | Out-Null
+        & robocopy $source $destination /E /COPY:DAT /DCOPY:T /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+        if ($LASTEXITCODE -gt 7) {
+            throw "robocopy failed for $RelativePath with exit code $LASTEXITCODE"
+        }
+    }
+    else {
+        Copy-Item -LiteralPath $source -Destination $destination -Force
+    }
 }
 
 function Copy-OptionalPath {
@@ -45,7 +55,16 @@ function Copy-OptionalPath {
     }
     $destination = Join-Path $stage (Join-Path "runtime" $RelativePath)
     New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
-    Copy-Item -LiteralPath $source -Destination $destination -Recurse -Force
+    if (Test-Path -LiteralPath $source -PathType Container) {
+        New-Item -ItemType Directory -Path $destination -Force | Out-Null
+        & robocopy $source $destination /E /COPY:DAT /DCOPY:T /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+        if ($LASTEXITCODE -gt 7) {
+            throw "robocopy failed for $RelativePath with exit code $LASTEXITCODE"
+        }
+    }
+    else {
+        Copy-Item -LiteralPath $source -Destination $destination -Force
+    }
 }
 
 # Source is embedded so reviewers can reproduce this exact package offline.
@@ -60,7 +79,6 @@ if ($LASTEXITCODE -ne 0) {
 @(
     "artifacts/models/dms/best_sequence_model.pt",
     "artifacts/training/roadface/train_runs/yolo26n_detached_v3/weights/best.pt",
-    "artifacts/training/roadface/yolop_panoptic",
     "artifacts/trips",
     "artifacts/evaluation",
     "artifacts/renders/roadface",
@@ -70,6 +88,10 @@ if ($LASTEXITCODE -ne 0) {
 ) | ForEach-Object { Copy-RequiredPath $_ }
 
 Copy-OptionalPath "artifacts/fleetiq-carsky-hmi.apk"
+
+if ($IncludeYolopMasks) {
+    Copy-RequiredPath "artifacts/training/roadface/yolop_panoptic"
+}
 
 if ($IncludeDataset) {
     # Only use for an approved organizer-to-organizer handoff. The data remains
@@ -92,20 +114,44 @@ This package is an offline handoff for Automotive Hackathon reviewers. It contai
 
 ## Integrity
 
-Verify every packaged file against `MANIFEST.sha256` before review. The source release intentionally excludes organizer data and generated artifacts; this runtime package supplies them without committing them to Git.
+Verify the key model and submission hashes in `MANIFEST.sha256` before review. The source release intentionally excludes organizer data and generated artifacts; this runtime package supplies them without committing them to Git.
 "@
 Set-Content -LiteralPath (Join-Path $stage "README.md") -Value $readme -Encoding utf8NoBOM
 
-$manifest = Get-ChildItem -LiteralPath $stage -Recurse -File |
-    Where-Object { $_.Name -ne "MANIFEST.sha256" } |
-    Sort-Object FullName |
-    ForEach-Object {
-        $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        "$hash  $($_.FullName.Substring($stage.Length + 1).Replace('\', '/'))"
-    }
+$keyFiles = @(
+    "source\$releaseName-source.zip",
+    "runtime\artifacts\models\dms\best_sequence_model.pt",
+    "runtime\artifacts\training\roadface\train_runs\yolo26n_detached_v3\weights\best.pt"
+) + (Get-ChildItem -LiteralPath (Join-Path $stage "runtime\predictions\UchiHahaha") -File | ForEach-Object {
+    $_.FullName.Substring($stage.Length + 1)
+})
+$directorySummaries = @(
+    "runtime\artifacts\trips",
+    "runtime\artifacts\evaluation",
+    "runtime\submission"
+) | ForEach-Object {
+    $directory = Join-Path $stage $_
+    $files = Get-ChildItem -LiteralPath $directory -Recurse -File
+    $bytes = ($files | Measure-Object -Property Length -Sum).Sum
+    "$($_.Replace('\', '/'))  files=$($files.Count)  bytes=$bytes"
+}
+$manifest = @("# SHA-256 hashes for source, selected models, and submission CSVs") + ($keyFiles | ForEach-Object {
+        $path = Join-Path $stage $_
+        $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+        "$hash  $($_.Replace('\', '/'))"
+    }) + @("", "# Directory summaries") + $directorySummaries
 Set-Content -LiteralPath (Join-Path $stage "MANIFEST.sha256") -Value $manifest -Encoding ascii
 
-Compress-Archive -LiteralPath $stage -DestinationPath $archive -CompressionLevel Optimal
+Push-Location $releaseRoot
+try {
+    & tar -a -cf $archive $releaseName
+    if ($LASTEXITCODE -ne 0) {
+        throw "tar failed while creating $archive"
+    }
+}
+finally {
+    Pop-Location
+}
 $sizeMiB = [math]::Round(((Get-Item -LiteralPath $archive).Length / 1MB), 1)
 Write-Host "Created $archive ($sizeMiB MiB)" -ForegroundColor Green
 Write-Host "Use -IncludeDataset only for an approved private organizer handoff." -ForegroundColor Yellow

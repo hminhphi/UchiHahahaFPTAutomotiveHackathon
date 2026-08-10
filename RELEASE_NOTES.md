@@ -25,7 +25,7 @@ On the full-GT `T01-Sample` Practice trip, the custom detector plus depth-ROI TT
 3. Obtain the organizer dataset through the approved channel; it is not committed or attached publicly by default.
 4. Follow `docs/runbooks/final-release.md`.
 
-The runtime package includes model weights, generated trip artifacts, evidence renders, validated predictions, submission workspace, and a SHA-256 manifest. Build an approved private handoff with `-IncludeDataset` only when the organizer permits redistribution.
+The runtime package includes selected model weights, generated trip artifacts, evidence renders, validated predictions, submission workspace, and a key-file SHA-256 manifest. Build an approved private handoff with `-IncludeDataset` only when the organizer permits redistribution. Add the full YOLOP mask set only with `-IncludeYolopMasks`; it is optional for the primary replay flow and substantially increases package size.
 
 ## Known Limits
 
